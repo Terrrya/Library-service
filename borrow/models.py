@@ -4,6 +4,7 @@ from typing import Type
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.utils import timezone
 
 from book.models import Book
 
@@ -11,9 +12,9 @@ from book.models import Book
 class Borrow(models.Model):
     """Borrow model."""
 
-    borrow_date = models.DateField(auto_now_add=True)
+    borrow_date = models.DateField(default=timezone.now().date())
     expected_return_date = models.DateField()
-    actual_return_date = models.DateField(null=True)
+    actual_return_date = models.DateField(null=True, blank=True)
     book = models.ForeignKey(
         to=Book, on_delete=models.CASCADE, related_name="borrows"
     )
@@ -21,21 +22,24 @@ class Borrow(models.Model):
         to=get_user_model(), on_delete=models.CASCADE, related_name="borrows"
     )
 
-    @staticmethod
     def validate_return_dates(
-        return_date: date,
+        self,
+        expected_return_date: str,
+        actual_return_date: str,
         borrow_date: date,
     ) -> None:
-        """Check that return date is always later than the borrow date"""
-        if return_date < borrow_date:
-            raise ValidationError(
-                f"You should check date later than borrow date: {borrow_date}"
-            )
+        """Check that return dates is always later than the borrow date"""
+        for return_date_attr in (expected_return_date, actual_return_date):
+            return_date_value = getattr(self, return_date_attr)
+            if return_date_value and return_date_value < borrow_date:
+                raise ValidationError(
+                    f"You should take {return_date_attr} "
+                    f"later than borrow date: {borrow_date}"
+                )
 
     def clean(self):
-        Borrow.validate_return_dates(self.actual_return_date, self.borrow_date)
-        Borrow.validate_return_dates(
-            self.expected_return_date, self.borrow_date
+        self.validate_return_dates(
+            "expected_return_date", "actual_return_date", self.borrow_date
         )
 
     def save(
