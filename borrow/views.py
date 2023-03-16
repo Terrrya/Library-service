@@ -23,3 +23,6 @@ class BorrowViewSet(
             return BorrowDetailSerializer
         if self.action == "create":
             return BorrowCreateSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
