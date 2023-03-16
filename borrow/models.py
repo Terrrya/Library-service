@@ -22,24 +22,29 @@ class Borrow(models.Model):
         to=get_user_model(), on_delete=models.CASCADE, related_name="borrows"
     )
 
-    def validate_return_dates(
+    def _validate_return_dates(
         self,
         expected_return_date: str,
         actual_return_date: str,
         borrow_date: date,
     ) -> None:
-        """Check that return dates is always later than the borrow date"""
+        """Validate that return dates is later than the borrow date"""
         for return_date_attr in (expected_return_date, actual_return_date):
             return_date_value = getattr(self, return_date_attr)
             if return_date_value and return_date_value < borrow_date:
                 raise ValidationError(
-                    f"You should take {return_date_attr} "
-                    f"later than borrow date: {borrow_date}"
+                    {
+                        return_date_attr: "You should take "
+                        f"{return_date_attr.replace('_', ' ')} later than "
+                        f"borrow date: {borrow_date}"
+                    }
                 )
 
     def clean(self):
-        self.validate_return_dates(
-            "expected_return_date", "actual_return_date", self.borrow_date
+        self._validate_return_dates(
+            "expected_return_date",
+            "actual_return_date",
+            self.borrow_date,
         )
 
     def save(
