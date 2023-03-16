@@ -1,18 +1,25 @@
-from rest_framework import mixins, viewsets
+from django.utils import timezone
+from rest_framework import mixins, viewsets, status
+from rest_framework.decorators import api_view
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.request import Request
+from rest_framework.response import Response
+from rest_framework.serializers import ValidationError
 
 from borrow.models import Borrow
 from borrow.serializers import (
     BorrowListSerializer,
     BorrowCreateSerializer,
     BorrowDetailSerializer,
+    BorrowSerializer,
 )
 
 
 class BorrowViewSet(
     mixins.ListModelMixin,
-    mixins.RetrieveModelMixin,
     mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
     """Borrow View"""
@@ -56,7 +63,28 @@ class BorrowViewSet(
             return BorrowDetailSerializer
         if self.action == "create":
             return BorrowCreateSerializer
+        return BorrowSerializer
 
     def perform_create(self, serializer):
         """Add current user to borrowing"""
         serializer.save(user=self.request.user)
+
+
+@api_view(["POST"])
+def borrow_book_return(request: Request, pk: int) -> Response:
+    """Close borrow and grow up book inventory when it returns"""
+    borrow = get_object_or_404(Borrow, id=pk)
+    book = borrow.book
+    if borrow.actual_return_date:
+        raise ValidationError(
+            {
+                "actual_return_date": "The Borrow already closed and book "
+                "returned to library"
+            }
+        )
+    borrow.actual_return_date = timezone.now().date()
+    book.inventory += 1
+    book.save()
+    borrow.save()
+    serializer = BorrowDetailSerializer(borrow)
+    return Response(serializer.data, status=status.HTTP_200_OK)
