@@ -23,8 +23,6 @@ class BorrowViewSet(
     viewsets.GenericViewSet,
 ):
     """Borrow View"""
-
-    queryset = Borrow.objects.all()
     permission_classes = (IsAuthenticated,)
 
     @staticmethod
@@ -36,7 +34,7 @@ class BorrowViewSet(
         """Return all borrows for admin user and self borrows for non-admin
         user. Filtering borrows by user ids for admin user and borrows active
         status"""
-        queryset = self.queryset
+        queryset = Borrow.objects.all()
         if not self.request.user.is_staff:
             queryset = queryset.filter(user_id=self.request.user.id)
 

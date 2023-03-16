@@ -4,7 +4,7 @@ from rest_framework import routers
 from borrow.views import BorrowViewSet, borrow_book_return
 
 router = routers.DefaultRouter()
-router.register("", BorrowViewSet)
+router.register("", BorrowViewSet, basename="borrow")
 
 app_name = "borrow"
 
