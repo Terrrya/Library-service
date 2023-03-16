@@ -1,10 +1,10 @@
 from django.urls import path, include
 from rest_framework import routers
 
-from borrow.views import BorrowListRetrieveViewSet
+from borrow.views import BorrowViewSet
 
 router = routers.DefaultRouter()
-router.register("", BorrowListRetrieveViewSet)
+router.register("", BorrowViewSet)
 
 app_name = "borrow"
 

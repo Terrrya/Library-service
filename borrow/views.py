@@ -1,13 +1,17 @@
-from django.shortcuts import render
 from rest_framework import mixins, viewsets
 
 from borrow.models import Borrow
-from borrow.serializers import BorrowSerializer, BorrowListSerializer
+from borrow.serializers import (
+    BorrowListSerializer,
+    BorrowCreateSerializer,
+    BorrowDetailSerializer,
+)
 
 
-class BorrowListRetrieveViewSet(
+class BorrowViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
     queryset = Borrow.objects.all()
@@ -16,5 +20,6 @@ class BorrowListRetrieveViewSet(
         if self.action == "list":
             return BorrowListSerializer
         if self.action == "retrieve":
-            return BorrowListSerializer
-        return BorrowSerializer
+            return BorrowDetailSerializer
+        if self.action == "create":
+            return BorrowCreateSerializer

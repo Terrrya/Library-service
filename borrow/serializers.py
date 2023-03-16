@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from book.serializers import BookSerializer
 from borrow.models import Borrow
+from user.serializers import UserSerializer
 
 
 class BorrowSerializer(serializers.ModelSerializer):
@@ -23,14 +24,34 @@ class BorrowSerializer(serializers.ModelSerializer):
         )
 
     def validate(self, attrs: dict) -> dict:
-        """Call validate return dates from model class"""
+        """Validation return dates from model class"""
         data = super().validate(attrs)
         try:
             Borrow(**data).clean()
         except ValidationError as error:
             raise serializers.ValidationError(error.message_dict)
+        book = data["book"]
+        if book.inventory <= 0:
+            raise serializers.ValidationError(
+                {
+                    "book": "There are no left book: "
+                    f"{book.title} in the library"
+                }
+            )
+        book.inventory -= 1
+        book.save()
         return data
 
 
 class BorrowListSerializer(BorrowSerializer):
     book = BookSerializer(many=False, read_only=True)
+
+
+class BorrowDetailSerializer(BorrowListSerializer):
+    user = UserSerializer(many=False, read_only=True)
+
+
+class BorrowCreateSerializer(BorrowSerializer):
+    user = serializers.SlugRelatedField(
+        many=False, read_only=True, slug_field="id"
+    )
