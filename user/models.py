@@ -38,7 +38,7 @@ class UserManager(BaseUserManager):
 
 
 class User(AbstractUser):
-    """User model."""
+    """User model with unique email."""
 
     username = None
     email = models.EmailField(_("email address"), unique=True)
@@ -47,3 +47,7 @@ class User(AbstractUser):
     REQUIRED_FIELDS = []
 
     objects = UserManager()
+
+
+class TelegramChat(models.Model):
+    chat_id = models.IntegerField()

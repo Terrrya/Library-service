@@ -23,6 +23,7 @@ class BorrowViewSet(
     viewsets.GenericViewSet,
 ):
     """Borrow View"""
+
     permission_classes = (IsAuthenticated,)
 
     @staticmethod
@@ -61,7 +62,6 @@ class BorrowViewSet(
             return BorrowDetailSerializer
         if self.action == "create":
             return BorrowCreateSerializer
-        return BorrowSerializer
 
     def perform_create(self, serializer):
         """Add current user to borrowing"""
