@@ -9,8 +9,12 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
+import os
 from datetime import timedelta
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,9 +24,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = (
-    "django-insecure-fdgd1x0gs$yp=tx-m!bud3^ej+9m)xyii=1j5$olxt&-##qcz_"
-)
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -142,3 +144,10 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKEN": True,
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZE",
 }
+
+# Telegram bot
+BOT_API = (
+    f"{os.getenv('BOT_API')}"
+    if os.getenv("BOT_API")
+    else "6106391819:AAHtjwZ4TTLgeOUi_rSl58as8pqMq5HlHSY"
+)

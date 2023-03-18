@@ -1,23 +1,30 @@
 import logging
-import os
 
+import telegram
 from asgiref.sync import sync_to_async
+from django.conf import settings
 from django.core.management import BaseCommand
-from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler
 
 from user.models import TelegramChat
 
-load_dotenv()
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
 )
 
 
+async def send_message(text: str, chat_user_id: int) -> None:
+    """Send message through telegram bot"""
+    bot = telegram.Bot(settings.BOT_API)
+    async with bot:
+        await bot.send_message(text=text, chat_id=chat_user_id)
+
+
 @sync_to_async
 def save_chat_id(chat_user_id: int, first_name: str) -> str:
+    """Save new chat_user_id and return string witch will be sent to user"""
     if chat_user_id not in TelegramChat.objects.values_list(
         "chat_user_id", flat=True
     ):
@@ -31,6 +38,7 @@ def save_chat_id(chat_user_id: int, first_name: str) -> str:
 
 @sync_to_async
 def delete_chat_id(chat_user_id: int) -> str:
+    """Delete chat_user_id from DB and return string about it"""
     if chat_user_id in TelegramChat.objects.values_list(
         "chat_user_id", flat=True
     ):
@@ -63,12 +71,7 @@ async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 class Command(BaseCommand):
     def handle(self, *args, **kwargs):
-        bot_api = (
-            f"{os.getenv('BOT_API')}"
-            if os.getenv("BOT_API")
-            else "6106391819:AAHtjwZ4TTLgeOUi_rSl58as8pqMq5HlHSY"
-        )
-        application = ApplicationBuilder().token(bot_api).build()
+        application = ApplicationBuilder().token(settings.BOT_API).build()
 
         start_handler = CommandHandler("start", start)
         stop_handler = CommandHandler("stop", stop)

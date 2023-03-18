@@ -1,10 +1,7 @@
 import asyncio
-import os
 from typing import Type
 
-import telegram
 from django.contrib.auth import get_user_model
-from dotenv import load_dotenv
 from django.db.models import QuerySet
 from django.utils import timezone
 from rest_framework import mixins, viewsets, status
@@ -23,20 +20,8 @@ from borrow.serializers import (
     BorrowDetailSerializer,
     BorrowSerializer,
 )
+from user.management.commands.t_bot import send_message
 from user.models import TelegramChat
-
-load_dotenv()
-
-
-async def send_message(text: str, chat_user_id: int) -> None:
-    bot_api = (
-        f"{os.getenv('BOT_API')}"
-        if os.getenv("BOT_API")
-        else "6106391819:AAHtjwZ4TTLgeOUi_rSl58as8pqMq5HlHSY"
-    )
-    bot = telegram.Bot(bot_api)
-    async with bot:
-        await bot.send_message(text=text, chat_id=chat_user_id)
 
 
 class BorrowViewSet(
