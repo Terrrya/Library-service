@@ -50,4 +50,4 @@ class User(AbstractUser):
 
 
 class TelegramChat(models.Model):
-    chat_id = models.IntegerField()
+    chat_user_id = models.IntegerField()
