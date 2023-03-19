@@ -15,7 +15,7 @@ logging.basicConfig(
 )
 
 
-async def send_message(text: str, chat_user_id: int) -> None:
+async def send_msg(text: str, chat_user_id: int) -> None:
     """Send message through telegram bot"""
     bot = telegram.Bot(settings.BOT_API)
     async with bot:
@@ -24,7 +24,9 @@ async def send_message(text: str, chat_user_id: int) -> None:
 
 @sync_to_async
 def save_chat_id(chat_user_id: int, first_name: str) -> str:
-    """Save new chat_user_id and return string witch will be sent to user"""
+    """
+    Save in DB new chat_user_id and return string witch will be sent to user
+    """
     if chat_user_id not in TelegramChat.objects.values_list(
         "chat_user_id", flat=True
     ):
@@ -54,7 +56,11 @@ def delete_chat_id(chat_user_id: int) -> str:
     )
 
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle command "start" in telegram chat with user & call function to
+    save chat user id in DB
+    """
     text = await save_chat_id(
         update.effective_user.id, update.effective_user.first_name
     )
@@ -64,17 +70,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
-async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def stop(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle command "stop" in telegram chat with user & call function to
+    delete chat user id in DB
+    """
     text = await delete_chat_id(update.effective_user.id)
     await context.bot.send_message(chat_id=update.effective_chat.id, text=text)
 
 
 class Command(BaseCommand):
-    def handle(self, *args, **kwargs):
+    def handle(self, *args: list, **kwargs: dict) -> None:
+        """The actual logic of the command to run telegram bot server"""
         application = ApplicationBuilder().token(settings.BOT_API).build()
-
         start_handler = CommandHandler("start", start)
         stop_handler = CommandHandler("stop", stop)
+
         application.add_handler(start_handler)
         application.add_handler(stop_handler)
 

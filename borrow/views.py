@@ -20,7 +20,7 @@ from borrow.serializers import (
     BorrowDetailSerializer,
     BorrowSerializer,
 )
-from user.management.commands.t_bot import send_message
+from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
 
 
@@ -40,9 +40,11 @@ class BorrowViewSet(
         return [int(str_id) for str_id in qs.split(",")]
 
     def get_queryset(self) -> QuerySet:
-        """Return all borrows for admin user and self borrows for non-admin
+        """
+        Return all borrows for admin user and self borrows for non-admin
         user. Filtering borrows by user ids for admin user and borrows active
-        status"""
+        status
+        """
         queryset = Borrow.objects.all()
         if not self.request.user.is_staff:
             queryset = queryset.filter(user_id=self.request.user.id)
@@ -72,7 +74,7 @@ class BorrowViewSet(
             return BorrowCreateSerializer
 
     def perform_create(self, serializer: BorrowSerializer) -> None:
-        """Add current user to borrowing & send message by telegram"""
+        """Save borrow serializer & send info message about it by telegram"""
         serializer.save(user=self.request.user)
         chat_user_id_list = TelegramChat.objects.values_list(
             "chat_user_id", flat=True
@@ -87,7 +89,7 @@ class BorrowViewSet(
         )
         if chat_user_id_list:
             for chat_user_id in chat_user_id_list:
-                asyncio.run(send_message(text=text, chat_user_id=chat_user_id))
+                asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
 
 
 @api_view(["POST"])
