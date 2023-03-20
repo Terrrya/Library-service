@@ -2,7 +2,6 @@ import asyncio
 
 from django.db.models import Q
 from django.utils import timezone
-from django_q.tasks import async_task
 from rest_framework.utils import json
 
 from borrow.models import Borrow
@@ -31,4 +30,4 @@ def inform_borrowing_overdue() -> None:
     for chat_user_id in TelegramChat.objects.values_list(
         "chat_user_id", flat=True
     ):
-        async_task(asyncio.run(send_msg(text=text, chat_user_id=chat_user_id)))
+        asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
