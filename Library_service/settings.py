@@ -116,7 +116,7 @@ AUTH_USER_MODEL = "user.User"
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Kiev"
 
 USE_I18N = True
 
@@ -158,7 +158,7 @@ BOT_API = (
 # Redis
 Q_CLUSTER = {
     "name": "myproject",
-    "workers": 8,
+    "workers": 4,
     "recycle": 500,
     "timeout": 60,
     "compress": True,
@@ -166,6 +166,7 @@ Q_CLUSTER = {
     "queue_limit": 500,
     "cpu_affinity": 1,
     "label": "Django Q",
+    "retry": 120,
     "redis": {
         "host": "localhost",
         "port": 6379,
