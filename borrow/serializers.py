@@ -3,7 +3,7 @@ from django.utils import timezone
 from rest_framework import serializers
 
 from book.serializers import BookSerializer
-from borrow.models import Borrow
+from borrow.models import Borrow, Payment
 from user.serializers import UserSerializer
 
 
@@ -69,9 +69,15 @@ class BorrowCreateSerializer(BorrowSerializer):
             )
         return data
 
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> Borrow:
         """Remove 1 book from book inventory when book is borrowed"""
         book = validated_data["book"]
         book.inventory -= 1
         book.save()
         return super().create(validated_data)
+
+
+class PaymentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = ("id", "borrows", "created_at")

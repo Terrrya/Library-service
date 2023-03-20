@@ -13,12 +13,14 @@ from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 
 from book.models import Book
-from borrow.models import Borrow
+from book.permissions import IsAdminOrAnyReadOnly
+from borrow.models import Borrow, Payment
 from borrow.serializers import (
     BorrowListSerializer,
     BorrowCreateSerializer,
     BorrowDetailSerializer,
     BorrowSerializer,
+    PaymentSerializer,
 )
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
@@ -90,6 +92,27 @@ class BorrowViewSet(
         if chat_user_id_list:
             for chat_user_id in chat_user_id_list:
                 asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+
+
+class PaymentViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    viewsets.GenericViewSet,
+):
+    serializer_class = PaymentSerializer
+    permission_classes = (IsAdminOrAnyReadOnly,)
+
+    def get_queryset(self):
+        """Return all orders for admin & only self orders for non_admin user"""
+        queryset = Payment.objects.all()
+        if not self.request.user.is_staff:
+            return queryset.filter(user=self.request.user)
+        return queryset
+
+    def perform_create(self, serializer: PaymentSerializer) -> None:
+        """Save borrow serializer & send info message about it by telegram"""
+        serializer.save(user=self.request.user)
 
 
 @api_view(["POST"])
