@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -54,7 +55,7 @@ class Borrow(models.Model):
                     }
                 )
 
-    def clean(self):
+    def clean(self) -> None:
         self._validate_return_dates(
             "expected_return_date",
             "actual_return_date",
@@ -65,11 +66,11 @@ class Borrow(models.Model):
         self,
         force_insert: bool = False,
         force_update: bool = False,
-        using: str = None,
-        update_fields: list[str] = None,
+        using: Optional[str] = None,
+        update_fields: Optional[list[str]] = None,
     ) -> None:
         self.full_clean()
         return super().save(force_insert, force_update, using, update_fields)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return str(self.borrow_date) + " " + self.book.title

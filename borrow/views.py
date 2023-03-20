@@ -103,7 +103,7 @@ class PaymentViewSet(
     serializer_class = PaymentSerializer
     permission_classes = (IsAdminOrAnyReadOnly,)
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet:
         """Return all orders for admin & only self orders for non_admin user"""
         queryset = Payment.objects.all()
         if not self.request.user.is_staff:
