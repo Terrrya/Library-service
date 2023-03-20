@@ -1,5 +1,4 @@
 from datetime import date
-from typing import Type
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
@@ -7,6 +6,15 @@ from django.db import models
 from django.utils import timezone
 
 from book.models import Book
+
+
+class Payment(models.Model):
+    """Order model."""
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        to=get_user_model(), on_delete=models.CASCADE, related_name="payments"
+    )
 
 
 class Borrow(models.Model):
@@ -20,6 +28,12 @@ class Borrow(models.Model):
     )
     user = models.ForeignKey(
         to=get_user_model(), on_delete=models.CASCADE, related_name="borrows"
+    )
+    payment = models.ForeignKey(
+        to=Payment,
+        on_delete=models.CASCADE,
+        related_name="borrows",
+        blank=True,
     )
 
     def _validate_return_dates(
@@ -56,3 +70,6 @@ class Borrow(models.Model):
     ) -> None:
         self.full_clean()
         return super().save(force_insert, force_update, using, update_fields)
+
+    def __str__(self):
+        return str(self.borrow_date) + " " + self.book.title
