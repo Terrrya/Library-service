@@ -1,8 +1,16 @@
 import asyncio
+import json
+import os.path
+from datetime import timedelta
+from decimal import Decimal
 from typing import Type
 
+import stripe
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import QuerySet
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.utils import timezone
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import api_view
@@ -133,3 +141,72 @@ def borrow_book_return(request: Request, pk: int) -> Response:
     borrow.save()
     serializer = BorrowDetailSerializer(borrow)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def calculate_payment_amount(pk: int) -> Decimal:
+    """
+    Calculate borrow amount
+    """
+    # Replace this constant with a calculation of the order's amount
+    # Calculate the order total on the server to prevent
+    # people from directly manipulating the amount on the client
+    # payment = get_object_or_404(Payment, id=pk)
+    borrow = get_object_or_404(Borrow, id=pk)
+    amount = Decimal(0)
+    # for borrow in list(Borrow.objects.filter(payment=payment)):
+    days_count = borrow.expected_return_date - borrow.borrow_date
+    amount += Decimal(borrow.book.daily_fee) * Decimal(
+        days_count / timedelta(days=1)
+    )
+    return amount
+
+
+# @api_view(["POST"])
+# def create_payment(request: Request, pk: int):
+#     stripe.api_key = settings.STRIPE_API_KEY
+#     try:
+#         # Create a PaymentIntent with the order amount and currency
+#         intent = stripe.PaymentIntent.create(
+#             amount=int(calculate_payment_amount(pk) * 100),
+#             currency="usd",
+#             automatic_payment_methods={
+#                 "enabled": True,
+#             },
+#         )
+#     except Exception as e:
+#         return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+#
+#     return Response(
+#         data=intent,
+#         status=status.HTTP_200_OK,
+#     )
+
+
+@api_view(["GET"])
+def create_checkout_session(request: Request, pk: int):
+    stripe.api_key = settings.STRIPE_API_KEY
+    borrow = get_object_or_404(Borrow, id=pk)
+    domain_url = "http://localhost:8000/"
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": int(calculate_payment_amount(pk) * 100),
+                        "product_data": {
+                            "name": borrow.book.title,
+                            "description": f"borrowing at {borrow.borrow_date}",
+                        },
+                    },
+                    "quantity": 1,
+                },
+            ],
+            mode="payment",
+            success_url=domain_url + "success/",
+            cancel_url=domain_url + "cancel/",
+        )
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+    return Response(checkout_session.url, status=status.HTTP_303_SEE_OTHER)

@@ -150,7 +150,7 @@ SIMPLE_JWT = {
 
 # Telegram bot
 BOT_API = (
-    f"{os.getenv('BOT_API')}"
+    os.getenv("BOT_API")
     if os.getenv("BOT_API")
     else "6106391819:AAHtjwZ4TTLgeOUi_rSl58as8pqMq5HlHSY"
 )
@@ -178,3 +178,6 @@ Q_CLUSTER = {
         "unix_socket_path": None,
     },
 }
+
+# STRIPE settings
+STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
