@@ -100,6 +100,15 @@ class BorrowViewSet(
         if chat_user_id_list:
             for chat_user_id in chat_user_id_list:
                 asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+        borrow = get_object_or_404(Borrow, id=serializer.data["id"])
+        checkout_dict = create_checkout_session(borrow)
+        payment = Payment.objects.create(
+            user=self.request.user,
+            session_id=checkout_dict["checkout_session_id"],
+            session_url=checkout_dict["checkout_session_url"],
+        )
+        borrow.payment = payment
+        borrow.save()
 
 
 class PaymentViewSet(
@@ -143,7 +152,7 @@ def borrow_book_return(request: Request, pk: int) -> Response:
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-def calculate_payment_amount(pk: int) -> Decimal:
+def calculate_payment_amount(borrow: Borrow) -> Decimal:
     """
     Calculate borrow amount
     """
@@ -151,11 +160,11 @@ def calculate_payment_amount(pk: int) -> Decimal:
     # Calculate the order total on the server to prevent
     # people from directly manipulating the amount on the client
     # payment = get_object_or_404(Payment, id=pk)
-    borrow = get_object_or_404(Borrow, id=pk)
-    amount = Decimal(0)
+    # borrow = get_object_or_404(Borrow, id=pk)
+    # amount = Decimal(0)
     # for borrow in list(Borrow.objects.filter(payment=payment)):
     days_count = borrow.expected_return_date - borrow.borrow_date
-    amount += Decimal(borrow.book.daily_fee) * Decimal(
+    amount = Decimal(borrow.book.daily_fee) * Decimal(
         days_count / timedelta(days=1)
     )
     return amount
@@ -182,10 +191,10 @@ def calculate_payment_amount(pk: int) -> Decimal:
 #     )
 
 
-@api_view(["GET"])
-def create_checkout_session(request: Request, pk: int):
+# @api_view(["GET"])
+def create_checkout_session(borrow: Borrow) -> dict[str] | Response:
     stripe.api_key = settings.STRIPE_API_KEY
-    borrow = get_object_or_404(Borrow, id=pk)
+    # borrow = get_object_or_404(Borrow, id=pk)
     domain_url = "http://localhost:8000/"
     try:
         checkout_session = stripe.checkout.Session.create(
@@ -193,10 +202,12 @@ def create_checkout_session(request: Request, pk: int):
                 {
                     "price_data": {
                         "currency": "usd",
-                        "unit_amount": int(calculate_payment_amount(pk) * 100),
+                        "unit_amount": int(
+                            calculate_payment_amount(borrow) * 100
+                        ),
                         "product_data": {
                             "name": borrow.book.title,
-                            "description": f"borrowing at {borrow.borrow_date}",
+                            "description": f"borrow at {borrow.borrow_date}",
                         },
                     },
                     "quantity": 1,
@@ -209,4 +220,7 @@ def create_checkout_session(request: Request, pk: int):
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
 
-    return Response(checkout_session.url, status=status.HTTP_303_SEE_OTHER)
+    return {
+        "checkout_session_url": checkout_session.url,
+        "checkout_session_id": checkout_session.id,
+    }

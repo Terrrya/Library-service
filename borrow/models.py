@@ -16,6 +16,8 @@ class Payment(models.Model):
     user = models.ForeignKey(
         to=get_user_model(), on_delete=models.CASCADE, related_name="payments"
     )
+    session_url = models.TextField(max_length=255)
+    session_id = models.TextField(max_length=255)
 
 
 class Borrow(models.Model):
@@ -35,6 +37,7 @@ class Borrow(models.Model):
         on_delete=models.CASCADE,
         related_name="borrows",
         blank=True,
+        null=True,
     )
 
     def _validate_return_dates(

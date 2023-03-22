@@ -20,6 +20,7 @@ class BorrowSerializer(serializers.ModelSerializer):
             "expected_return_date",
             "book",
             "user",
+            "payment",
         )
 
     def validate(self, attrs: dict) -> dict:
@@ -44,6 +45,7 @@ class BorrowListSerializer(BorrowSerializer):
             "actual_return_date",
             "book",
             "user",
+            "payment",
         )
 
 
@@ -80,4 +82,4 @@ class BorrowCreateSerializer(BorrowSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = ("id", "borrows", "created_at")
+        fields = ("id", "borrows", "created_at", "session_url", "session_id")
