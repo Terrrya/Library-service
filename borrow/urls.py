@@ -5,7 +5,8 @@ from borrow.views import (
     BorrowViewSet,
     borrow_book_return,
     PaymentViewSet,
-    create_checkout_session,
+    cancel_payment,
+    # create_checkout_session,
     # create_payment,
 )
 
@@ -24,8 +25,13 @@ urlpatterns = [
         name="borrow-book-return",
     ),
     path(
-        "borrows/<int:pk>/checkout/create",
-        create_checkout_session,
-        name="checkout-create",
+        "payments/<int:pk>/success-payment/",
+        PaymentViewSet.as_view({"get": "is_payment_success"}),
+        name="checkout-success",
+    ),
+    path(
+        "payments/<int:pk>/cancel-payment/",
+        cancel_payment,
+        name="cancel-payment",
     ),
 ]

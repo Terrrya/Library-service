@@ -57,6 +57,9 @@ class BorrowCreateSerializer(BorrowSerializer):
     user = serializers.SlugRelatedField(
         many=False, read_only=True, slug_field="id"
     )
+    payment = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field="id"
+    )
 
     def validate(self, attrs: dict) -> dict:
         """Validate borrow book inventory"""
@@ -82,4 +85,11 @@ class BorrowCreateSerializer(BorrowSerializer):
 class PaymentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payment
-        fields = ("id", "borrows", "created_at", "session_url", "session_id")
+        fields = (
+            "id",
+            "borrows",
+            "created_at",
+            "session_url",
+            "session_id",
+            "status",
+        )

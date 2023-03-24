@@ -16,8 +16,9 @@ class Payment(models.Model):
     user = models.ForeignKey(
         to=get_user_model(), on_delete=models.CASCADE, related_name="payments"
     )
-    session_url = models.TextField(max_length=255)
-    session_id = models.TextField(max_length=255)
+    session_url = models.TextField(max_length=255, blank=True)
+    session_id = models.TextField(max_length=255, blank=True)
+    status = models.TextField(max_length=20, default="open")
 
 
 class Borrow(models.Model):
