@@ -9,18 +9,6 @@ from django.utils import timezone
 from book.models import Book
 
 
-class Payment(models.Model):
-    """Order model."""
-
-    created_at = models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(
-        to=get_user_model(), on_delete=models.CASCADE, related_name="payments"
-    )
-    session_url = models.TextField(max_length=255, blank=True)
-    session_id = models.TextField(max_length=255, blank=True)
-    status = models.TextField(max_length=20, default="open")
-
-
 class Borrow(models.Model):
     """Borrow model."""
 
@@ -32,13 +20,6 @@ class Borrow(models.Model):
     )
     user = models.ForeignKey(
         to=get_user_model(), on_delete=models.CASCADE, related_name="borrows"
-    )
-    payment = models.ForeignKey(
-        to=Payment,
-        on_delete=models.CASCADE,
-        related_name="borrows",
-        blank=True,
-        null=True,
     )
 
     def _validate_return_dates(
@@ -78,3 +59,22 @@ class Borrow(models.Model):
 
     def __str__(self) -> str:
         return str(self.borrow_date) + " " + self.book.title
+
+
+class Payment(models.Model):
+    """Order model."""
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    user = models.ForeignKey(
+        to=get_user_model(), on_delete=models.CASCADE, related_name="payments"
+    )
+    session_url = models.TextField(max_length=255, blank=True)
+    session_id = models.TextField(max_length=255, blank=True)
+    status = models.TextField(max_length=20, default="open")
+    borrow = models.ForeignKey(
+        to=Borrow,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        blank=True,
+        null=True,
+    )

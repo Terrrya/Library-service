@@ -20,7 +20,7 @@ class BorrowSerializer(serializers.ModelSerializer):
             "expected_return_date",
             "book",
             "user",
-            "payment",
+            "payments",
         )
 
     def validate(self, attrs: dict) -> dict:
@@ -45,7 +45,7 @@ class BorrowListSerializer(BorrowSerializer):
             "actual_return_date",
             "book",
             "user",
-            "payment",
+            "payments",
         )
 
 
@@ -57,8 +57,8 @@ class BorrowCreateSerializer(BorrowSerializer):
     user = serializers.SlugRelatedField(
         many=False, read_only=True, slug_field="id"
     )
-    payment = serializers.SlugRelatedField(
-        many=False, read_only=True, slug_field="id"
+    payments = serializers.SlugRelatedField(
+        many=True, read_only=True, slug_field="id"
     )
 
     def validate(self, attrs: dict) -> dict:
@@ -87,7 +87,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         model = Payment
         fields = (
             "id",
-            "borrows",
+            "borrow",
             "created_at",
             "session_url",
             "session_id",
