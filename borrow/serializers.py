@@ -49,10 +49,6 @@ class BorrowListSerializer(BorrowSerializer):
         )
 
 
-class BorrowDetailSerializer(BorrowListSerializer):
-    user = UserSerializer(many=False, read_only=True)
-
-
 class BorrowCreateSerializer(BorrowSerializer):
     user = serializers.SlugRelatedField(
         many=False, read_only=True, slug_field="id"
@@ -93,3 +89,8 @@ class PaymentSerializer(serializers.ModelSerializer):
             "session_id",
             "status",
         )
+
+
+class BorrowDetailSerializer(BorrowListSerializer):
+    user = UserSerializer(many=False, read_only=True)
+    payments = PaymentSerializer(many=True, read_only=True)
