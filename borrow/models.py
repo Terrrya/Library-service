@@ -31,7 +31,7 @@ class Borrow(models.Model):
         """Validate that return dates is later than the borrow date"""
         for return_date_attr in (expected_return_date, actual_return_date):
             return_date_value = getattr(self, return_date_attr)
-            if return_date_value and return_date_value < borrow_date:
+            if return_date_value and return_date_value <= borrow_date:
                 raise ValidationError(
                     {
                         return_date_attr: "You should take "
