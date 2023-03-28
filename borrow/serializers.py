@@ -58,7 +58,7 @@ class BorrowCreateSerializer(BorrowSerializer):
         many=False, read_only=True, slug_field="id"
     )
     payment = serializers.SlugRelatedField(
-        many=True, read_only=True, slug_field="id"
+        many=False, read_only=True, slug_field="id"
     )
 
     def validate(self, attrs: dict) -> dict:

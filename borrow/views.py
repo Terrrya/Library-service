@@ -91,17 +91,21 @@ class BorrowViewSet(
         payment = Payment.objects.create(
             user=self.request.user,
         )
-        borrow = get_object_or_404(Borrow, id=serializer.data["id"])
-        borrow.payment = payment
-        borrow.save()
-        serializer.save(user=self.request.user, payment=payment)
+        serializer.validated_data.update({"payment": payment})
+        # serializer.is_valid(raise_exception=True)
+
+        serializer.save(user=self.request.user)
 
         data = serializer.data
-
+        print(data)
+        borrow = get_object_or_404(Borrow, id=data["id"])
+        # borrow.payment = payment
         checkout = self.create_checkout_session(borrow)
-        payment.session_id = checkout["id"]
-        payment.session_url = checkout["url"]
-        payment.save()
+        print(checkout["id"])
+        borrow.payment.session_id = checkout["id"]
+        borrow.payment.session_url = checkout["url"]
+        borrow.payment.save()
+        # borrow.save()
 
         chat_user_id_list = TelegramChat.objects.values_list(
             "chat_user_id", flat=True
