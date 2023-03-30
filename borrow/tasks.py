@@ -5,14 +5,18 @@ from django.utils import timezone
 from rest_framework.utils import json
 
 from borrow.models import Borrow
-from borrow.serializers import BorrowDetailSerializer
+from borrow.serializers import (
+    BorrowDetailSerializer,
+    BorrowListSerializer,
+    BorrowTelegramSerializer,
+)
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
 
 
 def inform_borrowing_overdue() -> None:
     """
-    Task in Django-Q witch send message about borrowing overdue through
+    Task in Django-Q witch send message about borrowing overdue using
     Telegram bot
     """
     text = "No borrowings overdue today!"
@@ -24,7 +28,7 @@ def inform_borrowing_overdue() -> None:
     if borrow_overdue_list:
         text = "Today borrowings overdue are:\n"
         for borrow in borrow_overdue_list:
-            serializer = BorrowDetailSerializer(borrow)
+            serializer = BorrowTelegramSerializer(borrow)
             text += json.dumps(serializer.data, indent=4) + "\n"
 
     for chat_user_id in TelegramChat.objects.values_list(

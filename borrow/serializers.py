@@ -2,9 +2,9 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
-from book.serializers import BookSerializer
+from book.serializers import BookSerializer, BookTelegramSerializer
 from borrow.models import Borrow, Payment
-from user.serializers import UserSerializer
+from user.serializers import UserSerializer, UserTelegramSerializer
 
 
 class BorrowSerializer(serializers.ModelSerializer):
@@ -94,3 +94,25 @@ class PaymentSerializer(serializers.ModelSerializer):
 class BorrowDetailSerializer(BorrowListSerializer):
     user = UserSerializer(many=False, read_only=True)
     payments = PaymentSerializer(many=True, read_only=True)
+
+
+class PaymentTelegramSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Payment
+        fields = ("created_at", "status")
+
+
+class BorrowTelegramSerializer(serializers.ModelSerializer):
+    user = UserTelegramSerializer(many=False, read_only=True)
+    payments = PaymentTelegramSerializer(many=True, read_only=True)
+    book = BookTelegramSerializer(many=False, read_only=True)
+
+    class Meta:
+        model = Borrow
+        fields = (
+            "borrow_date",
+            "expected_return_date",
+            "book",
+            "user",
+            "payments",
+        )
