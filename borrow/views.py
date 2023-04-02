@@ -35,6 +35,11 @@ from user.models import TelegramChat
 def start_checkout_session(
     borrow: Borrow, payment: Payment, fine_multiplier: int = 1
 ) -> Optional[Response]:
+    """
+    Start checkout session for payment at borrow with fine multiplier.
+    If fine multiplier == 1 borrow is created or payment is renewed, else
+    borrow is returned
+    """
     stripe.api_key = settings.STRIPE_API_KEY
     action_url = reverse("borrow:checkout-success", args=[payment.id])
     cancel_url = reverse("borrow:cancel-payment", args=[payment.id])
@@ -87,8 +92,6 @@ class BorrowViewSet(
     mixins.RetrieveModelMixin,
     viewsets.GenericViewSet,
 ):
-    """Borrow View"""
-
     permission_classes = (IsAuthenticated,)
 
     @staticmethod
@@ -131,6 +134,9 @@ class BorrowViewSet(
             return BorrowCreateSerializer
 
     def create(self, request: Request, *args: list, **kwargs: dict):
+        """
+        Create borrow and check if pending payment exist for user
+        """
         payments = Payment.objects.filter(
             Q(user=self.request.user) & Q(status__in=("open", "expired"))
         )
