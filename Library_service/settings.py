@@ -181,3 +181,5 @@ Q_CLUSTER = {
 
 # STRIPE settings
 STRIPE_API_KEY = os.getenv("STRIPE_API_KEY")
+
+HOST = os.getenv("HOST")
