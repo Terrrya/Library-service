@@ -1,15 +1,17 @@
 import asyncio
+from datetime import timedelta
 
-from django.db.models import Q
+from django.db.models import Q, F
 from django.utils import timezone
 from rest_framework.utils import json
 
-from borrow.models import Borrow
+from borrow.models import Borrow, Payment
 from borrow.serializers import (
     BorrowDetailSerializer,
     BorrowListSerializer,
     BorrowTelegramSerializer,
 )
+from borrow.views import BorrowViewSet
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
 
@@ -35,3 +37,10 @@ def inform_borrowing_overdue() -> None:
         "chat_user_id", flat=True
     ):
         asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+
+
+def check_payment_session_duration() -> None:
+    payments = Payment.objects.filter(status="open")
+    for payment in payments:
+        if timezone.now().date() - payment.created_at >= timedelta(days=1):
+            payment.status = "expired"
