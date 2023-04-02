@@ -217,6 +217,15 @@ class PaymentViewSet(
             payment.status = "success"
             payment.save()
 
+            chat_user_id_list = TelegramChat.objects.values_list(
+                "chat_user_id", flat=True
+            )
+            borrow = payment.borrow
+            text = f"For borrowing {borrow} payment was paid"
+            if chat_user_id_list:
+                for chat_user_id in chat_user_id_list:
+                    asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+
         serializer = self.get_serializer(payment)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
