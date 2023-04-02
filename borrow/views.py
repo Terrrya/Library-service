@@ -3,7 +3,7 @@ import json
 import os.path
 from datetime import timedelta
 from decimal import Decimal
-from typing import Type
+from typing import Type, Optional
 
 import stripe
 from django.conf import settings
@@ -33,6 +33,53 @@ from borrow.serializers import (
 )
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
+
+
+def start_checkout_session(
+    borrow: Borrow, payment: Payment, fine_multiplier: int = 1
+) -> Optional[Response]:
+    stripe.api_key = settings.STRIPE_API_KEY
+    action_url = reverse("borrow:checkout-success", args=[payment.id])
+    cancel_url = reverse("borrow:cancel-payment", args=[payment.id])
+    host = "settings.HOST"
+    if fine_multiplier == 1:
+        days_count = borrow.expected_return_date - borrow.borrow_date
+    else:
+        days_count = borrow.actual_return_date - borrow.expected_return_date
+    amount = (
+        fine_multiplier
+        * Decimal(borrow.book.daily_fee)
+        * Decimal(days_count / timedelta(days=1))
+    )
+
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": int(amount * 100),
+                        "product_data": {
+                            "name": borrow.book.title,
+                            "description": "borrowing "
+                            f"at {borrow.borrow_date}",
+                        },
+                    },
+                    "quantity": 1,
+                },
+            ],
+            mode="payment",
+            success_url=str(host + action_url),
+            cancel_url=str(host + cancel_url),
+        )
+
+    except Exception as e:
+        return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+    payment.session_id = checkout_session["id"]
+    payment.session_url = checkout_session["url"]
+    payment.save()
+    borrow.payments.add(payment)
+    borrow.save()
 
 
 class BorrowViewSet(
@@ -102,11 +149,11 @@ class BorrowViewSet(
             print(data)
             borrow = get_object_or_404(Borrow, id=data["id"])
             # borrow.payment = payment
-            checkout = self.create_checkout_session(borrow)
-            print(checkout["id"])
-            payment.session_id = checkout["id"]
-            payment.session_url = checkout["url"]
-            payment.save()
+            start_checkout_session(borrow, payment)
+            # print(checkout["id"])
+            # payment.session_id = checkout["id"]
+            # payment.session_url = checkout["url"]
+            # payment.save()
             # borrow.save()
 
         chat_user_id_list = TelegramChat.objects.values_list(
@@ -123,60 +170,60 @@ class BorrowViewSet(
             for chat_user_id in chat_user_id_list:
                 asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
 
-    @staticmethod
-    def calculate_payment_amount(borrow: Borrow) -> Decimal:
-        """
-        Calculate borrow amount
-        """
-        days_count = borrow.expected_return_date - borrow.borrow_date
-        amount = Decimal(borrow.book.daily_fee) * Decimal(
-            days_count / timedelta(days=1)
-        )
-        return amount
+    # @staticmethod
+    # def calculate_payment_amount(borrow: Borrow) -> Decimal:
+    #     """
+    #     Calculate borrow amount
+    #     """
+    #     days_count = borrow.expected_return_date - borrow.borrow_date
+    #     amount = Decimal(borrow.book.daily_fee) * Decimal(
+    #         days_count / timedelta(days=1)
+    #     )
+    #     return amount
 
-    def create_checkout_session(self, borrow: Borrow) -> dict[str] | Response:
-        """
-        Create checkout session for payment
-        """
-        stripe.api_key = settings.STRIPE_API_KEY
-
-        action_url = reverse(
-            "borrow:checkout-success", args=[borrow.payments.all()[0].id]
-        )
-        cancel_url = reverse(
-            "borrow:cancel-payment", args=[borrow.payments.all()[0].id]
-        )
-        localhost = "http://localhost:8000"
-
-        try:
-            checkout_session = stripe.checkout.Session.create(
-                line_items=[
-                    {
-                        "price_data": {
-                            "currency": "usd",
-                            "unit_amount": int(
-                                self.calculate_payment_amount(borrow) * 100
-                            ),
-                            "product_data": {
-                                "name": borrow.book.title,
-                                "description": "borrowing "
-                                f"at {borrow.borrow_date}",
-                            },
-                        },
-                        "quantity": 1,
-                    },
-                ],
-                mode="payment",
-                success_url=str(localhost + action_url),
-                cancel_url=str(localhost + cancel_url),
-            )
-            print(checkout_session)
-            return checkout_session
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)}, status=status.HTTP_403_FORBIDDEN
-            )
+    # def create_checkout_session(self, borrow: Borrow) -> dict[str] | Response:
+    #     """
+    #     Create checkout session for payment
+    #     """
+    #     stripe.api_key = settings.STRIPE_API_KEY
+    #
+    #     action_url = reverse(
+    #         "borrow:checkout-success", args=[borrow.payments.all()[0].id]
+    #     )
+    #     cancel_url = reverse(
+    #         "borrow:cancel-payment", args=[borrow.payments.all()[0].id]
+    #     )
+    #     localhost = "http://localhost:8000"
+    #
+    #     try:
+    #         checkout_session = stripe.checkout.Session.create(
+    #             line_items=[
+    #                 {
+    #                     "price_data": {
+    #                         "currency": "usd",
+    #                         "unit_amount": int(
+    #                             self.calculate_payment_amount(borrow) * 100
+    #                         ),
+    #                         "product_data": {
+    #                             "name": borrow.book.title,
+    #                             "description": "borrowing "
+    #                             f"at {borrow.borrow_date}",
+    #                         },
+    #                     },
+    #                     "quantity": 1,
+    #                 },
+    #             ],
+    #             mode="payment",
+    #             success_url=str(localhost + action_url),
+    #             cancel_url=str(localhost + cancel_url),
+    #         )
+    #         print(checkout_session)
+    #         return checkout_session
+    #
+    #     except Exception as e:
+    #         return Response(
+    #             {"error": str(e)}, status=status.HTTP_403_FORBIDDEN
+    #         )
 
 
 class PaymentViewSet(
@@ -240,48 +287,49 @@ def borrow_book_return(request: Request, pk: int) -> Response:
 
     if borrow.actual_return_date > borrow.expected_return_date:
         payment = Payment.objects.create(user=request.user)
-        stripe.api_key = settings.STRIPE_API_KEY
-        action_url = reverse("borrow:checkout-success", args=[payment.id])
-        cancel_url = reverse("borrow:cancel-payment", args=[payment.id])
-        localhost = "http://localhost:8000"
-        days_count = borrow.actual_return_date - borrow.expected_return_date
-        amount = (
-            2
-            * Decimal(borrow.book.daily_fee)
-            * Decimal(days_count / timedelta(days=1))
-        )
-
-        try:
-            checkout_session = stripe.checkout.Session.create(
-                line_items=[
-                    {
-                        "price_data": {
-                            "currency": "usd",
-                            "unit_amount": int(amount * 100),
-                            "product_data": {
-                                "name": borrow.book.title,
-                                "description": "borrowing "
-                                f"at {borrow.borrow_date}",
-                            },
-                        },
-                        "quantity": 1,
-                    },
-                ],
-                mode="payment",
-                success_url=str(localhost + action_url),
-                cancel_url=str(localhost + cancel_url),
-            )
-            print(checkout_session)
-
-        except Exception as e:
-            return Response(
-                {"error": str(e)}, status=status.HTTP_403_FORBIDDEN
-            )
-        payment.session_id = checkout_session["id"]
-        payment.session_url = checkout_session["url"]
-        payment.save()
-        borrow.payments.add(payment)
-        borrow.save()
+        start_checkout_session(borrow, payment, 2)
+        # stripe.api_key = settings.STRIPE_API_KEY
+        # action_url = reverse("borrow:checkout-success", args=[payment.id])
+        # cancel_url = reverse("borrow:cancel-payment", args=[payment.id])
+        # localhost = "http://localhost:8000"
+        # days_count = borrow.actual_return_date - borrow.expected_return_date
+        # amount = (
+        #     2
+        #     * Decimal(borrow.book.daily_fee)
+        #     * Decimal(days_count / timedelta(days=1))
+        # )
+        #
+        # try:
+        #     checkout_session = stripe.checkout.Session.create(
+        #         line_items=[
+        #             {
+        #                 "price_data": {
+        #                     "currency": "usd",
+        #                     "unit_amount": int(amount * 100),
+        #                     "product_data": {
+        #                         "name": borrow.book.title,
+        #                         "description": "borrowing "
+        #                         f"at {borrow.borrow_date}",
+        #                     },
+        #                 },
+        #                 "quantity": 1,
+        #             },
+        #         ],
+        #         mode="payment",
+        #         success_url=str(localhost + action_url),
+        #         cancel_url=str(localhost + cancel_url),
+        #     )
+        #     print(checkout_session)
+        #
+        # except Exception as e:
+        #     return Response(
+        #         {"error": str(e)}, status=status.HTTP_403_FORBIDDEN
+        #     )
+        # payment.session_id = checkout_session["id"]
+        # payment.session_url = checkout_session["url"]
+        # payment.save()
+        # borrow.payments.add(payment)
+        # borrow.save()
 
     serializer = BorrowDetailSerializer(borrow)
 
@@ -299,3 +347,15 @@ def cancel_payment(request: Request, pk: int = None) -> Response:
     )
 
     return Response(message, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+def renew_payment(request: Request, pk: int = None) -> Response:
+    """Renew payment"""
+    payment = get_object_or_404(Payment, id=pk)
+    borrow = payment.borrow
+    payment = Payment.objects.create(user=request.user)
+    start_checkout_session(borrow, payment)
+
+    serializer = PaymentSerializer(payment)
+    return Response(serializer.data, status=status.HTTP_200_OK)
