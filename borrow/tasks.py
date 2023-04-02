@@ -42,5 +42,6 @@ def inform_borrowing_overdue() -> None:
 def check_payment_session_duration() -> None:
     payments = Payment.objects.filter(status="open")
     for payment in payments:
-        if timezone.now().date() - payment.created_at >= timedelta(days=1):
+        if timezone.now() - payment.created_at >= timedelta(days=1):
             payment.status = "expired"
+            payment.save()
