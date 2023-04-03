@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 
@@ -31,6 +33,23 @@ class UserSerializer(serializers.ModelSerializer):
             user.save()
 
         return user
+
+    def validate(self, data):
+        """
+        Validate data with validating password using AUTH_PASSWORD_VALIDATORS
+        """
+        user = get_user_model()(**data)
+        password = data.get("password")
+
+        errors = dict()
+        try:
+            validate_password(password=password, user=user)
+        except ValidationError as e:
+            errors["password"] = list(e.messages)
+        if errors:
+            raise serializers.ValidationError(errors)
+
+        return super(UserSerializer, self).validate(data)
 
 
 class UserTelegramSerializer(UserSerializer):
