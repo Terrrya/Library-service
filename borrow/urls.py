@@ -7,14 +7,11 @@ from borrow.views import (
     PaymentViewSet,
     cancel_payment,
     renew_payment,
-    # create_checkout_session,
-    # create_payment,
 )
 
 router = routers.DefaultRouter()
 router.register("borrows", BorrowViewSet, basename="borrow")
 router.register("payments", PaymentViewSet, basename="payment")
-
 
 app_name = "borrow"
 
@@ -24,11 +21,6 @@ urlpatterns = [
         "borrows/<int:pk>/return/",
         borrow_book_return,
         name="borrow-book-return",
-    ),
-    path(
-        "payments/<int:pk>/success-payment/",
-        PaymentViewSet.as_view({"get": "is_payment_success"}),
-        name="checkout-success",
     ),
     path(
         "payments/<int:pk>/cancel-payment/",

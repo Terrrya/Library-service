@@ -10,6 +10,13 @@ from django.db import transaction
 from django.db.models import QuerySet, Q
 from django.urls import reverse
 from django.utils import timezone
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import (
+    extend_schema,
+    OpenApiParameter,
+    extend_schema_view,
+    OpenApiResponse,
+)
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import api_view, action
 from rest_framework.generics import get_object_or_404
@@ -19,7 +26,6 @@ from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 
 from book.models import Book
-from book.permissions import IsAdminOrAnyReadOnly
 from borrow.models import Borrow, Payment
 from borrow.serializers import (
     BorrowListSerializer,
@@ -41,7 +47,9 @@ def start_checkout_session(
     borrow is returned
     """
     stripe.api_key = settings.STRIPE_API_KEY
-    action_url = reverse("borrow:checkout-success", args=[payment.id])
+    action_url = reverse(
+        "borrow:payment-is-payment-success", args=[payment.id]
+    )
     cancel_url = reverse("borrow:cancel-payment", args=[payment.id])
     host = settings.HOST
     if fine_multiplier == 1:
@@ -78,7 +86,6 @@ def start_checkout_session(
     except Exception as e:
         return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
 
-    print(checkout_session)
     payment.session_id = checkout_session["id"]
     payment.session_url = checkout_session["url"]
     payment.save()
@@ -86,6 +93,19 @@ def start_checkout_session(
     borrow.save()
 
 
+@extend_schema_view(
+    create=extend_schema(
+        description="Create borrow and check if pending payment exist for "
+        "user. Create & add payment for borrow, & send info message about it "
+        "using telegram"
+    ),
+    list=extend_schema(
+        description="Return all borrows for admin user and self borrows for "
+        "non-admin user. Can filtering borrows by user for admin user and by "
+        "borrows active status for all user"
+    ),
+    retrieve=extend_schema(description="Return borrow detail information"),
+)
 class BorrowViewSet(
     mixins.ListModelMixin,
     mixins.CreateModelMixin,
@@ -113,9 +133,8 @@ class BorrowViewSet(
         user_ids = self.request.query_params.get("user_id")
 
         if is_active:
-            is_active = self._params_to_ints(is_active)[0]
             queryset = queryset.filter(
-                actual_return_date__isnull=bool(is_active)
+                actual_return_date__isnull=bool(int(is_active))
             )
 
         if user_ids and self.request.user.is_staff:
@@ -123,6 +142,26 @@ class BorrowViewSet(
             queryset = queryset.filter(user_id__in=user_ids)
 
         return queryset
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                "is_active",
+                type={"type": "number"},
+                description=(
+                    "Filter by borrowing returned or no "
+                    "(ex. ?is_active=1). 1 == True, 0 == False"
+                ),
+            ),
+            OpenApiParameter(
+                "user_ids",
+                type={"type": "list", "items": {"type": "number"}},
+                description="Filter by users (ex. ?user_ids=2,7,9).",
+            ),
+        ]
+    )
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     def get_serializer_class(self) -> Type[BorrowSerializer]:
         """Take different serializers for different actions"""
@@ -140,7 +179,6 @@ class BorrowViewSet(
         payments = Payment.objects.filter(
             Q(user=self.request.user) & Q(status__in=("open", "expired"))
         )
-        print(payments)
         if payments:
             return Response(
                 {"error": "You did not pay all of your payments"},
@@ -179,6 +217,14 @@ class BorrowViewSet(
                 asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
 
 
+@extend_schema_view(
+    create=extend_schema(description="Crate payment for logged user"),
+    list=extend_schema(
+        description="Return list of payments for logged user "
+        "and all payments is logged user is staff"
+    ),
+    retrieve=extend_schema(description="Return payment detail information"),
+)
 class PaymentViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
@@ -186,7 +232,7 @@ class PaymentViewSet(
     viewsets.GenericViewSet,
 ):
     serializer_class = PaymentSerializer
-    permission_classes = (IsAdminOrAnyReadOnly,)
+    permission_classes = (IsAuthenticated,)
 
     def get_queryset(self) -> QuerySet:
         """Return all orders for admin & only self orders for non_admin user"""
@@ -197,13 +243,13 @@ class PaymentViewSet(
         return queryset
 
     def perform_create(self, serializer: PaymentSerializer) -> None:
-        """Save borrow serializer & send info message about it by telegram"""
+        """Save payment serializer for logged user"""
         serializer.save(user=self.request.user)
 
     @action(
         methods=["GET"],
         detail=True,
-        url_path="payment-success",
+        url_name="is-payment-success",
     )
     def is_payment_success(self, request: Request, pk: int = None) -> Response:
         """
@@ -213,7 +259,7 @@ class PaymentViewSet(
         payment = self.get_object()
         session = stripe.checkout.Session.retrieve(payment.session_id)
 
-        if session.status == "complete":
+        if session.status == "complete" and payment.status != "success":
             payment.status = "success"
             payment.save()
 
@@ -231,6 +277,10 @@ class PaymentViewSet(
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    request=None,
+    responses=BorrowDetailSerializer,
+)
 @api_view(["POST"])
 def borrow_book_return(request: Request, pk: int) -> Response:
     """Close borrow and grow up book inventory when it returns"""
@@ -257,10 +307,13 @@ def borrow_book_return(request: Request, pk: int) -> Response:
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    responses=OpenApiResponse(OpenApiTypes.STR),
+)
 @api_view(["GET"])
 def cancel_payment(request: Request, pk: int = None) -> Response:
     """
-    Display massage to user about payment's possibilities and duration session
+    Display message to user about payment's possibilities and duration session
     """
     message = (
         "You can pay later, but remember, "
@@ -270,6 +323,9 @@ def cancel_payment(request: Request, pk: int = None) -> Response:
     return Response(message, status=status.HTTP_200_OK)
 
 
+@extend_schema(
+    responses=PaymentSerializer,
+)
 @api_view(["GET"])
 def renew_payment(request: Request, pk: int = None) -> Response:
     """Renew payment"""
