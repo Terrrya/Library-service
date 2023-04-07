@@ -1,14 +1,11 @@
 import asyncio
-from datetime import timedelta
-from decimal import Decimal
-from typing import Type, Optional
+from typing import Type
 
 import stripe
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import QuerySet, Q
-from django.urls import reverse
 from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
@@ -34,63 +31,9 @@ from borrow.serializers import (
     BorrowSerializer,
     PaymentSerializer,
 )
+from borrow.utils import start_checkout_session
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
-
-
-def start_checkout_session(
-    borrow: Borrow, payment: Payment, fine_multiplier: int = 1
-) -> Optional[Response]:
-    """
-    Start checkout session for payment at borrow with fine multiplier.
-    If fine multiplier == 1 borrow is created or payment is renewed, else
-    borrow is returned
-    """
-    stripe.api_key = settings.STRIPE_API_KEY
-    action_url = reverse(
-        "borrow:payment-is-payment-success", args=[payment.id]
-    )
-    cancel_url = reverse("borrow:cancel-payment", args=[payment.id])
-    host = settings.HOST
-    if fine_multiplier == 1:
-        days_count = borrow.expected_return_date - borrow.borrow_date
-    else:
-        days_count = borrow.actual_return_date - borrow.expected_return_date
-    amount = (
-        fine_multiplier
-        * Decimal(borrow.book.daily_fee)
-        * Decimal(days_count / timedelta(days=1))
-    )
-
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[
-                {
-                    "price_data": {
-                        "currency": "usd",
-                        "unit_amount": int(amount * 100),
-                        "product_data": {
-                            "name": borrow.book.title,
-                            "description": "borrowing "
-                            f"at {borrow.borrow_date}",
-                        },
-                    },
-                    "quantity": 1,
-                },
-            ],
-            mode="payment",
-            success_url=str(host + action_url),
-            cancel_url=str(host + cancel_url),
-        )
-
-    except Exception as e:
-        return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
-
-    payment.session_id = checkout_session["id"]
-    payment.session_url = checkout_session["url"]
-    payment.save()
-    borrow.payments.add(payment)
-    borrow.save()
 
 
 @extend_schema_view(
