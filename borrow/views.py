@@ -23,6 +23,7 @@ from rest_framework.response import Response
 from rest_framework.serializers import ValidationError
 
 from book.models import Book
+from borrow import utils
 from borrow.models import Borrow, Payment
 from borrow.serializers import (
     BorrowListSerializer,
@@ -31,7 +32,6 @@ from borrow.serializers import (
     BorrowSerializer,
     PaymentSerializer,
 )
-from borrow.utils import start_checkout_session
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
 
@@ -140,10 +140,18 @@ class BorrowViewSet(
             )
 
             serializer.save(user=self.request.user, payments=[payment])
-            data = serializer.data
 
+            data = serializer.data
             borrow = get_object_or_404(Borrow, id=data["id"])
-            start_checkout_session(borrow, payment)
+
+            checkout_session = utils.start_checkout_session(borrow, payment)
+
+            payment.session_id = checkout_session["id"]
+            payment.session_url = checkout_session["url"]
+            payment.save()
+
+            borrow.payments.add(payment)
+            borrow.save()
 
         chat_user_id_list = TelegramChat.objects.values_list(
             "chat_user_id", flat=True
@@ -192,9 +200,9 @@ class PaymentViewSet(
     @action(
         methods=["GET"],
         detail=True,
-        url_name="is-payment-success",
+        url_name="is-success",
     )
-    def is_payment_success(self, request: Request, pk: int = None) -> Response:
+    def is_success(self, request: Request, pk: int = None) -> Response:
         """
         Check session's payment status & change Payment status if it changed
         """
@@ -243,7 +251,15 @@ def borrow_book_return(request: Request, pk: int) -> Response:
 
     if borrow.actual_return_date > borrow.expected_return_date:
         payment = Payment.objects.create(user=request.user)
-        start_checkout_session(borrow, payment, 2)
+
+        checkout_session = utils.start_checkout_session(borrow, payment, 2)
+
+        payment.session_id = checkout_session["id"]
+        payment.session_url = checkout_session["url"]
+        payment.save()
+
+        borrow.payments.add(payment)
+        borrow.save()
 
     serializer = BorrowDetailSerializer(borrow)
 
@@ -272,10 +288,18 @@ def cancel_payment(request: Request, pk: int = None) -> Response:
 @api_view(["GET"])
 def renew_payment(request: Request, pk: int = None) -> Response:
     """Renew payment"""
-    payment = get_object_or_404(Payment, id=pk)
-    borrow = payment.borrow
-    payment = Payment.objects.create(user=request.user)
-    start_checkout_session(borrow, payment)
+    expired_payment = get_object_or_404(Payment, id=pk)
+    borrow = expired_payment.borrow
+    new_payment = Payment.objects.create(user=request.user)
 
-    serializer = PaymentSerializer(payment)
+    checkout_session = utils.start_checkout_session(borrow, new_payment)
+
+    new_payment.session_id = checkout_session["id"]
+    new_payment.session_url = checkout_session["url"]
+    new_payment.save()
+    
+    borrow.payments.add(new_payment)
+    borrow.save()
+
+    serializer = PaymentSerializer(new_payment)
     return Response(serializer.data, status=status.HTTP_200_OK)
