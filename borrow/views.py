@@ -297,7 +297,7 @@ def renew_payment(request: Request, pk: int = None) -> Response:
     new_payment.session_id = checkout_session["id"]
     new_payment.session_url = checkout_session["url"]
     new_payment.save()
-    
+
     borrow.payments.add(new_payment)
     borrow.save()
 
