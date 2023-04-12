@@ -17,6 +17,7 @@ from drf_spectacular.utils import (
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import api_view, action
 from rest_framework.generics import get_object_or_404
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -34,6 +35,11 @@ from borrow.serializers import (
 )
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
+
+
+class BorrowPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
 
 
 @extend_schema_view(
@@ -56,6 +62,7 @@ class BorrowViewSet(
     viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
+    pagination_class = BorrowPagination
 
     @staticmethod
     def _params_to_ints(qs: str) -> list[int]:
