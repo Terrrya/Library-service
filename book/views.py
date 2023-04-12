@@ -1,9 +1,15 @@
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework import viewsets
+from rest_framework.pagination import PageNumberPagination
 
 from book.models import Book
 from book.permissions import IsAdminOrAnyReadOnly
 from book.serializers import BookSerializer
+
+
+class BookPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
 
 
 @extend_schema_view(
@@ -28,3 +34,4 @@ class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     permission_classes = (IsAdminOrAnyReadOnly,)
+    pagination_class = BookPagination
