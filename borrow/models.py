@@ -12,7 +12,7 @@ from book.models import Book
 class Borrow(models.Model):
     """Borrow model."""
 
-    borrow_date = models.DateField(default=timezone.now().date())
+    borrow_date = models.DateField(default=timezone.now().date)
     expected_return_date = models.DateField()
     actual_return_date = models.DateField(null=True, blank=True)
     book = models.ForeignKey(
