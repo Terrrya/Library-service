@@ -22,6 +22,9 @@ class Borrow(models.Model):
         to=get_user_model(), on_delete=models.CASCADE, related_name="borrows"
     )
 
+    class Meta:
+        ordering = ["-borrow_date"]
+
     def _validate_return_dates(
         self,
         expected_return_date: str,
