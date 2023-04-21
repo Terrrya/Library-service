@@ -10,6 +10,7 @@ from book.models import Book
 from book.serializers import BookSerializer
 
 BOOK_URL = reverse("book:book-list")
+PAGINATION_SIZE = 10
 
 
 def sample_book(**params) -> Book:
@@ -38,8 +39,28 @@ class UnauthenticatedBookApiTests(TestCase):
 
         response = self.client.get(BOOK_URL)
         serializer = BookSerializer(books, many=True)
-        print(serializer.data)
+
         self.assertEqual(response.data["results"], serializer.data)
+
+    def test_list_book_is_paginated(self) -> None:
+        for i in range(25):
+            sample_book(title=f"Test{i}")
+        books = Book.objects.all()
+
+        response = self.client.get(BOOK_URL)
+        serializer = BookSerializer(books[:PAGINATION_SIZE], many=True)
+        next_page = response.data["next"]
+        next_books = books[PAGINATION_SIZE:]
+
+        while next_page:
+            self.assertEqual(response.data["results"], serializer.data)
+
+            response = self.client.get(next_page)
+            next_page = response.data["next"]
+            serializer = BookSerializer(
+                next_books[:PAGINATION_SIZE], many=True
+            )
+            next_books = next_books[PAGINATION_SIZE:]
 
     def test_retrieve_book(self) -> None:
         book = sample_book()
