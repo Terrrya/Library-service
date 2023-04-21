@@ -33,10 +33,21 @@ def inform_borrowing_overdue() -> None:
             serializer = BorrowTelegramSerializer(borrow)
             text += json.dumps(serializer.data, indent=4) + "\n"
 
-    for chat_user_id in TelegramChat.objects.values_list(
-        "chat_user_id", flat=True
-    ):
-        asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+    if len(text) > 4096:
+        for i in range(0, len(text), 4096):
+            for chat_user_id in TelegramChat.objects.values_list(
+                "chat_user_id", flat=True
+            ):
+                asyncio.run(
+                    send_msg(
+                        text=text[i: i + 4096], chat_user_id=chat_user_id
+                    )
+                )
+    else:
+        for chat_user_id in TelegramChat.objects.values_list(
+            "chat_user_id", flat=True
+        ):
+            asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
 
 
 def check_payment_session_duration() -> None:
