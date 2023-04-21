@@ -127,7 +127,7 @@ class BorrowViewSet(
         Create borrow and check if pending payment exist for user
         """
         payments = Payment.objects.filter(
-            Q(user=self.request.user) & Q(status__in=("open", "expired"))
+            Q(user=self.request.user) & Q(status="open")
         )
         if payments:
             return Response(
