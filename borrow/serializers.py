@@ -104,7 +104,6 @@ class PaymentTelegramSerializer(serializers.ModelSerializer):
 
 class BorrowTelegramSerializer(serializers.ModelSerializer):
     user = UserTelegramSerializer(many=False, read_only=True)
-    payments = PaymentTelegramSerializer(many=True, read_only=True)
     book = BookTelegramSerializer(many=False, read_only=True)
 
     class Meta:
@@ -114,5 +113,4 @@ class BorrowTelegramSerializer(serializers.ModelSerializer):
             "expected_return_date",
             "book",
             "user",
-            "payments",
         )
