@@ -33,7 +33,7 @@ from borrow.serializers import (
     BorrowSerializer,
     PaymentSerializer,
 )
-from user.management.commands.t_bot import send_msg
+from user.management.commands import t_bot
 from user.models import TelegramChat
 
 
@@ -172,7 +172,14 @@ class BorrowViewSet(
         )
         if chat_user_id_list:
             for chat_user_id in chat_user_id_list:
-                asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+                asyncio.run(
+                    t_bot.send_msg(text=text, chat_user_id=chat_user_id)
+                )
+
+
+class PaymentPagination(PageNumberPagination):
+    page_size = 10
+    max_page_size = 100
 
 
 @extend_schema_view(
@@ -191,6 +198,7 @@ class PaymentViewSet(
 ):
     serializer_class = PaymentSerializer
     permission_classes = (IsAuthenticated,)
+    pagination_class = PaymentPagination
 
     def get_queryset(self) -> QuerySet:
         """Return all orders for admin & only self orders for non_admin user"""
@@ -228,7 +236,9 @@ class PaymentViewSet(
             text = f"For borrowing {borrow} payment was paid"
             if chat_user_id_list:
                 for chat_user_id in chat_user_id_list:
-                    asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+                    asyncio.run(
+                        t_bot.send_msg(text=text, chat_user_id=chat_user_id)
+                    )
 
         serializer = self.get_serializer(payment)
 
