@@ -65,7 +65,7 @@ class Borrow(models.Model):
 
 
 class Payment(models.Model):
-    """Order model."""
+    """Payment model."""
 
     created_at = models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(
@@ -81,3 +81,6 @@ class Payment(models.Model):
         blank=True,
         null=True,
     )
+
+    class Meta:
+        ordering = ["-created_at"]
