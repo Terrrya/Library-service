@@ -310,7 +310,7 @@ def cancel_payment(request: Request, pk: int = None) -> Response:
 
 
 @extend_schema(
-    responses=PaymentSerializer,
+    responses=PaymentListSerializer,
 )
 @api_view(["GET"])
 def renew_payment(request: Request, pk: int = None) -> Response:
