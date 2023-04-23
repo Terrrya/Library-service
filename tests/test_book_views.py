@@ -188,7 +188,7 @@ class AdminBookApiTests(TestCase):
 
         response = self.client.get(BOOK_URL)
         serializer = BookSerializer(books, many=True)
-        print(serializer.data)
+
         self.assertEqual(response.data["results"], serializer.data)
 
     def test_retrieve_book(self) -> None:
@@ -210,7 +210,6 @@ class AdminBookApiTests(TestCase):
         }
 
         response = self.client.post(BOOK_URL, payload)
-        print(response.data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
