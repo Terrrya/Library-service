@@ -250,7 +250,7 @@ class PaymentViewSet(
                         t_bot.send_msg(text=text, chat_user_id=chat_user_id)
                     )
 
-        serializer = self.get_serializer(payment)
+        serializer = PaymentListSerializer(payment)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
