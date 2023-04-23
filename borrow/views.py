@@ -32,6 +32,8 @@ from borrow.serializers import (
     BorrowDetailSerializer,
     BorrowSerializer,
     PaymentSerializer,
+    PaymentListSerializer,
+    PaymentDetailSerializer,
 )
 from user.management.commands import t_bot
 from user.models import TelegramChat
@@ -196,7 +198,6 @@ class PaymentViewSet(
     mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
-    serializer_class = PaymentSerializer
     permission_classes = (IsAuthenticated,)
     pagination_class = PaymentPagination
 
@@ -207,6 +208,17 @@ class PaymentViewSet(
             return queryset.filter(user=self.request.user)
 
         return queryset
+
+    def get_serializer_class(
+        self,
+    ) -> Type[PaymentListSerializer | PaymentSerializer]:
+        """Take different serializers for different actions"""
+        if self.action == "list":
+            return PaymentListSerializer
+        if self.action == "retrieve":
+            return PaymentDetailSerializer
+        if self.action == "create":
+            return PaymentListSerializer
 
     def perform_create(self, serializer: PaymentSerializer) -> None:
         """Save payment serializer for logged user"""

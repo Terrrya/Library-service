@@ -96,10 +96,51 @@ class BorrowDetailSerializer(BorrowListSerializer):
     payments = PaymentSerializer(many=True, read_only=True)
 
 
-class PaymentTelegramSerializer(serializers.ModelSerializer):
+class PaymentListSerializer(serializers.ModelSerializer):
+    user = serializers.SlugRelatedField(
+        many=False, read_only=True, slug_field="id"
+    )
+
     class Meta:
         model = Payment
-        fields = ("created_at", "status")
+        fields = (
+            "id",
+            "borrow",
+            "created_at",
+            "session_url",
+            "session_id",
+            "status",
+            "user",
+        )
+
+
+class BorrowPaymentSerializer(BorrowListSerializer):
+    class Meta:
+        model = Borrow
+        fields = (
+            "id",
+            "borrow_date",
+            "expected_return_date",
+            "actual_return_date",
+            "book",
+        )
+
+
+class PaymentDetailSerializer(PaymentListSerializer):
+    user = UserSerializer(many=False, read_only=True)
+    borrow = BorrowPaymentSerializer(many=False, read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = (
+            "id",
+            "borrow",
+            "created_at",
+            "session_url",
+            "session_id",
+            "status",
+            "user",
+        )
 
 
 class BorrowTelegramSerializer(serializers.ModelSerializer):
