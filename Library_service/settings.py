@@ -144,7 +144,7 @@ REST_FRAMEWORK = {
 
 # JWT authenticate settings
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=2),
     "ROTATE_REFRESH_TOKEN": True,
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZE",
