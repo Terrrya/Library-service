@@ -209,9 +209,7 @@ class PaymentViewSet(
 
         return queryset
 
-    def get_serializer_class(
-        self,
-    ) -> Type[PaymentListSerializer | PaymentSerializer]:
+    def get_serializer_class(self) -> Type[PaymentListSerializer]:
         """Take different serializers for different actions"""
         if self.action == "list":
             return PaymentListSerializer
@@ -220,7 +218,7 @@ class PaymentViewSet(
         if self.action == "create":
             return PaymentListSerializer
 
-    def perform_create(self, serializer: PaymentSerializer) -> None:
+    def perform_create(self, serializer: PaymentListSerializer) -> None:
         """Save payment serializer for logged user"""
         serializer.save(user=self.request.user)
 
@@ -330,5 +328,5 @@ def renew_payment(request: Request, pk: int = None) -> Response:
     borrow.payments.add(new_payment)
     borrow.save()
 
-    serializer = PaymentSerializer(new_payment)
+    serializer = PaymentListSerializer(new_payment)
     return Response(serializer.data, status=status.HTTP_200_OK)
