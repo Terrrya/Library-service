@@ -10,8 +10,10 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
 import os
+import sys
 from datetime import timedelta
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -92,11 +94,22 @@ WSGI_APPLICATION = "Library_service.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("POSTGRES_DB"),
+        "USER": os.getenv("POSTGRES_USER"),
+        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
+        "HOST": os.getenv("POSTGRES_HOST"),
+        "PORT": os.getenv("POSTGRES_PORT"),
     }
 }
 
+if "test" in sys.argv:
+    DATABASES["default"].update(
+        {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -179,16 +192,7 @@ Q_CLUSTER = {
     "cpu_affinity": 1,
     "label": "Django Q",
     "retry": 120,
-    "redis": {
-        "host": "localhost",
-        "port": 6379,
-        "db": 0,
-        "password": None,
-        "socket_timeout": None,
-        "charset": "utf-8",
-        "errors": "strict",
-        "unix_socket_path": None,
-    },
+    "redis": "redis://redis",
 }
 
 # STRIPE settings
