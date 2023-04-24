@@ -1,5 +1,4 @@
 from datetime import timedelta
-from decimal import Decimal
 from unittest import mock
 
 from django.contrib.auth import get_user_model
@@ -9,13 +8,13 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from book.models import Book
 from borrow.models import Borrow, Payment
 from borrow.serializers import (
     BorrowListSerializer,
     BorrowDetailSerializer,
     BorrowCreateSerializer,
 )
+from tests.test_book_views import sample_book
 from user.models import TelegramChat
 
 BORROW_URL = reverse("borrow:borrow-list")
@@ -26,16 +25,12 @@ CHECKOUT_SESSION_DATA = {
 }
 
 
-def sample_book(**params) -> Book:
+def sample_borrow(**params) -> Borrow:
     defaults = {
-        "title": "Test Book",
-        "author": "Test Author",
-        "cover": Book.CoverChoices.HARD,
-        "inventory": 35,
-        "daily_fee": Decimal(1.25),
+        "expected_return_date": timezone.now().date() + timedelta(days=10)
     }
     defaults.update(params)
-    return Book.objects.create(**defaults)
+    return Borrow.objects.create(**defaults)
 
 
 def sample_payment(**params) -> Payment:
@@ -46,14 +41,6 @@ def sample_payment(**params) -> Payment:
     }
     defaults.update(params)
     return Payment.objects.create(**defaults)
-
-
-def sample_borrow(**params) -> Borrow:
-    defaults = {
-        "expected_return_date": timezone.now().date() + timedelta(days=10)
-    }
-    defaults.update(params)
-    return Borrow.objects.create(**defaults)
 
 
 def detail_borrow_url(borrow_id: int) -> str:

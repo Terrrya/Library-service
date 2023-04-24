@@ -1,20 +1,18 @@
-from datetime import timedelta
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
-from decimal import Decimal
-from book.models import Book
-from borrow.models import Payment, Borrow
+
+from borrow.models import Payment
 from borrow.serializers import (
-    PaymentSerializer,
     PaymentListSerializer,
     PaymentDetailSerializer,
 )
+from tests.test_book_views import sample_book
+from tests.test_borrow_views.test_borrow import sample_borrow, sample_payment
 from user.models import TelegramChat
 
 PAYMENT_URL = reverse("borrow:payment-list")
@@ -23,36 +21,6 @@ PAGINATION_SIZE = 10
 
 def detail_payment_url(payment_id: int) -> str:
     return reverse("borrow:payment-detail", args=(payment_id,))
-
-
-def sample_payment(**params) -> Payment:
-    defaults = {
-        "session_url": "https://test.com",
-        "session_id": "test_id",
-        "status": "open",
-    }
-    defaults.update(params)
-    return Payment.objects.create(**defaults)
-
-
-def sample_book(**params) -> Book:
-    defaults = {
-        "title": "Test Book",
-        "author": "Test Author",
-        "cover": Book.CoverChoices.HARD,
-        "inventory": 35,
-        "daily_fee": Decimal(1.25),
-    }
-    defaults.update(params)
-    return Book.objects.create(**defaults)
-
-
-def sample_borrow(**params) -> Borrow:
-    defaults = {
-        "expected_return_date": timezone.now().date() + timedelta(days=10)
-    }
-    defaults.update(params)
-    return Borrow.objects.create(**defaults)
 
 
 class UnauthenticatedPaymentTests(TestCase):
