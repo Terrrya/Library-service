@@ -9,7 +9,7 @@ from borrow.models import Borrow, Payment
 from borrow.serializers import (
     BorrowTelegramSerializer,
 )
-from user.management.commands.t_bot import send_msg
+from user.management.commands import t_bot
 from user.models import TelegramChat
 
 
@@ -36,7 +36,7 @@ def inform_borrowing_overdue() -> None:
                 "chat_user_id", flat=True
             ):
                 asyncio.run(
-                    send_msg(
+                    t_bot.send_msg(
                         text=text[i : i + 4096], chat_user_id=chat_user_id
                     )
                 )
@@ -44,7 +44,7 @@ def inform_borrowing_overdue() -> None:
         for chat_user_id in TelegramChat.objects.values_list(
             "chat_user_id", flat=True
         ):
-            asyncio.run(send_msg(text=text, chat_user_id=chat_user_id))
+            asyncio.run(t_bot.send_msg(text=text, chat_user_id=chat_user_id))
 
 
 def check_payment_session_duration() -> None:
