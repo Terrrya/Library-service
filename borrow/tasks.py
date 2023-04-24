@@ -1,17 +1,14 @@
 import asyncio
 from datetime import timedelta
 
-from django.db.models import Q, F
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework.utils import json
 
 from borrow.models import Borrow, Payment
 from borrow.serializers import (
-    BorrowDetailSerializer,
-    BorrowListSerializer,
     BorrowTelegramSerializer,
 )
-from borrow.views import BorrowViewSet
 from user.management.commands.t_bot import send_msg
 from user.models import TelegramChat
 
