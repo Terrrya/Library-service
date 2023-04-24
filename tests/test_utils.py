@@ -1,22 +1,17 @@
 from datetime import timedelta
+from decimal import Decimal
 from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
-from decimal import Decimal
-
 from django.utils import timezone
-
-from book.models import Book
-from borrow.models import Payment
 from rest_framework.test import APIClient
 
 from borrow.utils import start_checkout_session
 from tests.test_book_views import sample_book
 from tests.test_borrow_views.test_borrow import sample_borrow, sample_payment
-
 
 HOST = settings.HOST
 
