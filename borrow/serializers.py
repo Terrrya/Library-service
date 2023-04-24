@@ -100,6 +100,9 @@ class PaymentListSerializer(serializers.ModelSerializer):
     user = serializers.SlugRelatedField(
         many=False, read_only=True, slug_field="id"
     )
+    borrow = serializers.PrimaryKeyRelatedField(
+        queryset=Borrow.objects.select_related("user", "book"),
+    )
 
     class Meta:
         model = Payment

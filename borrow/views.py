@@ -31,7 +31,6 @@ from borrow.serializers import (
     BorrowCreateSerializer,
     BorrowDetailSerializer,
     BorrowSerializer,
-    PaymentSerializer,
     PaymentListSerializer,
     PaymentDetailSerializer,
 )
@@ -77,7 +76,9 @@ class BorrowViewSet(
         user. Filtering borrows by user ids for admin user and borrows active
         status
         """
-        queryset = Borrow.objects.all()
+        queryset = Borrow.objects.select_related(
+            "book", "user"
+        ).prefetch_related("payments")
         if not self.request.user.is_staff:
             queryset = queryset.filter(user_id=self.request.user.id)
 
@@ -203,7 +204,7 @@ class PaymentViewSet(
 
     def get_queryset(self) -> QuerySet:
         """Return all orders for admin & only self orders for non_admin user"""
-        queryset = Payment.objects.all()
+        queryset = Payment.objects.select_related("user", "borrow")
         if not self.request.user.is_staff:
             return queryset.filter(user=self.request.user)
 
