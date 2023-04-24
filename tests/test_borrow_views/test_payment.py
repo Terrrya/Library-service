@@ -66,21 +66,6 @@ class AuthenticatedPaymentTests(TestCase):
 
         self.assertEqual(response.data, serializer.data)
 
-    def test_create_payment_for_logged_in_user(self) -> None:
-        payload = {
-            "session_url": "https://test.com",
-            "session_id": "test_id",
-            "status": "open",
-        }
-
-        response = self.client.post(PAYMENT_URL, payload)
-        payment = Payment.objects.get(id=response.data["id"])
-        serializer = PaymentListSerializer(payment)
-
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data, serializer.data)
-        self.assertEqual(response.data["user"], self.user.id)
-
     def test_update_payment_not_allowed(self) -> None:
         sample_payment(user=self.user)
         payload = {

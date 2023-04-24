@@ -186,7 +186,6 @@ class PaymentPagination(PageNumberPagination):
 
 
 @extend_schema_view(
-    create=extend_schema(description="Crate payment for logged user"),
     list=extend_schema(
         description="Return list of payments for logged user "
         "and all payments is logged user is staff"
@@ -196,7 +195,6 @@ class PaymentPagination(PageNumberPagination):
 class PaymentViewSet(
     mixins.ListModelMixin,
     mixins.RetrieveModelMixin,
-    mixins.CreateModelMixin,
     viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
@@ -216,12 +214,6 @@ class PaymentViewSet(
             return PaymentListSerializer
         if self.action == "retrieve":
             return PaymentDetailSerializer
-        if self.action == "create":
-            return PaymentListSerializer
-
-    def perform_create(self, serializer: PaymentListSerializer) -> None:
-        """Save payment serializer for logged user"""
-        serializer.save(user=self.request.user)
 
     @action(
         methods=["GET"],
