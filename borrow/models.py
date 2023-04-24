@@ -4,7 +4,6 @@ from typing import Optional
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils import timezone
 
 from book.models import Book
 
@@ -12,7 +11,7 @@ from book.models import Book
 class Borrow(models.Model):
     """Borrow model."""
 
-    borrow_date = models.DateField(default=timezone.now().date)
+    borrow_date = models.DateField(default=date.today)
     expected_return_date = models.DateField()
     actual_return_date = models.DateField(null=True, blank=True)
     book = models.ForeignKey(
