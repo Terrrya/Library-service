@@ -37,7 +37,7 @@ def inform_borrowing_overdue() -> None:
             ):
                 asyncio.run(
                     send_msg(
-                        text=text[i: i + 4096], chat_user_id=chat_user_id
+                        text=text[i : i + 4096], chat_user_id=chat_user_id
                     )
                 )
     else:
