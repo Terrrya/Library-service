@@ -174,11 +174,7 @@ SIMPLE_JWT = {
 }
 
 # Telegram bot
-BOT_API = (
-    os.getenv("BOT_API")
-    if os.getenv("BOT_API")
-    else "6106391819:AAHtjwZ4TTLgeOUi_rSl58as8pqMq5HlHSY"
-)
+BOT_API = os.getenv("BOT_API")
 
 # Redis
 Q_CLUSTER = {
