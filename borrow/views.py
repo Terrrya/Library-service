@@ -38,11 +38,6 @@ from user.management.commands import t_bot
 from user.models import TelegramChat
 
 
-class BorrowPagination(PageNumberPagination):
-    page_size = 10
-    max_page_size = 100
-
-
 @extend_schema_view(
     create=extend_schema(
         description="Create borrow and check if pending payment exist for "
@@ -63,7 +58,6 @@ class BorrowViewSet(
     viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
-    pagination_class = BorrowPagination
 
     @staticmethod
     def _params_to_ints(qs: str) -> list[int]:
@@ -180,11 +174,6 @@ class BorrowViewSet(
                 )
 
 
-class PaymentPagination(PageNumberPagination):
-    page_size = 10
-    max_page_size = 100
-
-
 @extend_schema_view(
     list=extend_schema(
         description="Return list of payments for logged user "
@@ -198,7 +187,6 @@ class PaymentViewSet(
     viewsets.GenericViewSet,
 ):
     permission_classes = (IsAuthenticated,)
-    pagination_class = PaymentPagination
 
     def get_queryset(self) -> QuerySet:
         """Return all orders for admin & only self orders for non_admin user"""

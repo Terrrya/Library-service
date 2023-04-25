@@ -7,11 +7,6 @@ from book.permissions import IsAdminOrAnyReadOnly
 from book.serializers import BookSerializer
 
 
-class BookPagination(PageNumberPagination):
-    page_size = 10
-    max_page_size = 100
-
-
 @extend_schema_view(
     create=extend_schema(
         description="Crate new book. Only staff user can create"
@@ -34,4 +29,3 @@ class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     permission_classes = (IsAdminOrAnyReadOnly,)
-    pagination_class = BookPagination
