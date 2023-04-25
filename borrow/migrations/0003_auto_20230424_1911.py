@@ -11,6 +11,8 @@ def func(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("borrow", "0002_initial"),
+        ("sessions", "0001_initial"),
+        ("django_q", "0014_schedule_cluster"),
     ]
 
     operations = [migrations.RunPython(func)]
