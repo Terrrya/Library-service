@@ -5,8 +5,8 @@ from borrow.views import (
     BorrowViewSet,
     borrow_book_return,
     PaymentViewSet,
-    cancel_payment,
-    renew_payment,
+    # cancel_payment,
+    # renew_payment,
 )
 
 router = routers.DefaultRouter()
@@ -22,14 +22,14 @@ urlpatterns = [
         borrow_book_return,
         name="borrow-book-return",
     ),
-    path(
-        "payments/<int:pk>/cancel-payment/",
-        cancel_payment,
-        name="cancel-payment",
-    ),
-    path(
-        "payments/<int:pk>/renew-payment/",
-        renew_payment,
-        name="renew-payment",
-    ),
+    # path(
+    #     "payments/<int:pk>/cancel-payment/",
+    #     cancel_payment,
+    #     name="cancel-payment",
+    # ),
+    # path(
+    #     "payments/<int:pk>/renew-payment/",
+    #     renew_payment,
+    #     name="renew-payment",
+    # ),
 ]

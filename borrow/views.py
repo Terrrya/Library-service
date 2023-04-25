@@ -235,6 +235,52 @@ class PaymentViewSet(
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    # @extend_schema(
+    #     responses=PaymentListSerializer,
+    # )
+    @action(
+        methods=["GET"],
+        detail=True,
+        url_name="renew-payment",
+    )
+    def renew_payment(self, request: Request, pk: int = None) -> Response:
+        """Renew payment"""
+        expired_payment = get_object_or_404(Payment, id=pk)
+        borrow = expired_payment.borrow
+        new_payment = Payment.objects.create(user=request.user)
+
+        checkout_session = utils.start_checkout_session(borrow, new_payment)
+
+        new_payment.session_id = checkout_session["id"]
+        new_payment.session_url = checkout_session["url"]
+        new_payment.save()
+
+        borrow.payments.add(new_payment)
+        borrow.save()
+
+        serializer = PaymentListSerializer(new_payment)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    # @extend_schema(
+    #     responses=OpenApiResponse(OpenApiTypes.STR),
+    # )
+    # @api_view(["GET"])
+    @action(
+        methods=["GET"],
+        detail=True,
+        url_name="cancel-payment",
+    )
+    def cancel_payment(self, request: Request, pk: int = None) -> Response:
+        """
+        Display message to user about payment's possibilities and duration session
+        """
+        message = (
+            "You can pay later, but remember, "
+            "the payment must be made within 24 hours"
+        )
+
+        return Response(message, status=status.HTTP_200_OK)
+
 
 @extend_schema(
     request=None,
@@ -274,40 +320,40 @@ def borrow_book_return(request: Request, pk: int) -> Response:
     return Response(serializer.data, status=status.HTTP_200_OK)
 
 
-@extend_schema(
-    responses=OpenApiResponse(OpenApiTypes.STR),
-)
-@api_view(["GET"])
-def cancel_payment(request: Request, pk: int = None) -> Response:
-    """
-    Display message to user about payment's possibilities and duration session
-    """
-    message = (
-        "You can pay later, but remember, "
-        "the payment must be made within 24 hours"
-    )
+# @extend_schema(
+#     responses=OpenApiResponse(OpenApiTypes.STR),
+# )
+# @api_view(["GET"])
+# def cancel_payment(request: Request, pk: int = None) -> Response:
+#     """
+#     Display message to user about payment's possibilities and duration session
+#     """
+#     message = (
+#         "You can pay later, but remember, "
+#         "the payment must be made within 24 hours"
+#     )
+#
+#     return Response(message, status=status.HTTP_200_OK)
 
-    return Response(message, status=status.HTTP_200_OK)
 
-
-@extend_schema(
-    responses=PaymentListSerializer,
-)
-@api_view(["GET"])
-def renew_payment(request: Request, pk: int = None) -> Response:
-    """Renew payment"""
-    expired_payment = get_object_or_404(Payment, id=pk)
-    borrow = expired_payment.borrow
-    new_payment = Payment.objects.create(user=request.user)
-
-    checkout_session = utils.start_checkout_session(borrow, new_payment)
-
-    new_payment.session_id = checkout_session["id"]
-    new_payment.session_url = checkout_session["url"]
-    new_payment.save()
-
-    borrow.payments.add(new_payment)
-    borrow.save()
-
-    serializer = PaymentListSerializer(new_payment)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+# @extend_schema(
+#     responses=PaymentListSerializer,
+# )
+# @api_view(["GET"])
+# def renew_payment(request: Request, pk: int = None) -> Response:
+#     """Renew payment"""
+#     expired_payment = get_object_or_404(Payment, id=pk)
+#     borrow = expired_payment.borrow
+#     new_payment = Payment.objects.create(user=request.user)
+#
+#     checkout_session = utils.start_checkout_session(borrow, new_payment)
+#
+#     new_payment.session_id = checkout_session["id"]
+#     new_payment.session_url = checkout_session["url"]
+#     new_payment.save()
+#
+#     borrow.payments.add(new_payment)
+#     borrow.save()
+#
+#     serializer = PaymentListSerializer(new_payment)
+#     return Response(serializer.data, status=status.HTTP_200_OK)
