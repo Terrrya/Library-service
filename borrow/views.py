@@ -17,7 +17,6 @@ from drf_spectacular.utils import (
 from rest_framework import mixins, viewsets, status
 from rest_framework.decorators import api_view, action
 from rest_framework.generics import get_object_or_404
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -203,6 +202,9 @@ class PaymentViewSet(
         if self.action == "retrieve":
             return PaymentDetailSerializer
 
+    @extend_schema(
+        responses=PaymentListSerializer,
+    )
     @action(
         methods=["GET"],
         detail=True,
@@ -235,9 +237,9 @@ class PaymentViewSet(
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # @extend_schema(
-    #     responses=PaymentListSerializer,
-    # )
+    @extend_schema(
+        responses=PaymentListSerializer,
+    )
     @action(
         methods=["GET"],
         detail=True,
@@ -261,10 +263,9 @@ class PaymentViewSet(
         serializer = PaymentListSerializer(new_payment)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-    # @extend_schema(
-    #     responses=OpenApiResponse(OpenApiTypes.STR),
-    # )
-    # @api_view(["GET"])
+    @extend_schema(
+        responses=OpenApiResponse(OpenApiTypes.STR),
+    )
     @action(
         methods=["GET"],
         detail=True,
@@ -318,42 +319,3 @@ def borrow_book_return(request: Request, pk: int) -> Response:
     serializer = BorrowDetailSerializer(borrow)
 
     return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-# @extend_schema(
-#     responses=OpenApiResponse(OpenApiTypes.STR),
-# )
-# @api_view(["GET"])
-# def cancel_payment(request: Request, pk: int = None) -> Response:
-#     """
-#     Display message to user about payment's possibilities and duration session
-#     """
-#     message = (
-#         "You can pay later, but remember, "
-#         "the payment must be made within 24 hours"
-#     )
-#
-#     return Response(message, status=status.HTTP_200_OK)
-
-
-# @extend_schema(
-#     responses=PaymentListSerializer,
-# )
-# @api_view(["GET"])
-# def renew_payment(request: Request, pk: int = None) -> Response:
-#     """Renew payment"""
-#     expired_payment = get_object_or_404(Payment, id=pk)
-#     borrow = expired_payment.borrow
-#     new_payment = Payment.objects.create(user=request.user)
-#
-#     checkout_session = utils.start_checkout_session(borrow, new_payment)
-#
-#     new_payment.session_id = checkout_session["id"]
-#     new_payment.session_url = checkout_session["url"]
-#     new_payment.save()
-#
-#     borrow.payments.add(new_payment)
-#     borrow.save()
-#
-#     serializer = PaymentListSerializer(new_payment)
-#     return Response(serializer.data, status=status.HTTP_200_OK)
