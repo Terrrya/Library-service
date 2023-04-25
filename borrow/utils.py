@@ -1,6 +1,5 @@
 from datetime import timedelta
 from decimal import Decimal
-from typing import Optional
 
 import stripe
 from django.conf import settings
