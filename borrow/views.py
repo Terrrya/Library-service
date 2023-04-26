@@ -15,7 +15,7 @@ from drf_spectacular.utils import (
     OpenApiResponse,
 )
 from rest_framework import mixins, viewsets, status
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
@@ -33,7 +33,8 @@ from borrow.serializers import (
     PaymentListSerializer,
     PaymentDetailSerializer,
     BorrowReturnBookSerializer,
-    PaymentIsSuccessSerializer, PaymentSerializer,
+    PaymentIsSuccessSerializer,
+    PaymentSerializer,
 )
 from user.management.commands import t_bot
 from user.models import TelegramChat
@@ -301,21 +302,34 @@ class PaymentViewSet(
     )
     def renew_payment(self, request: Request, pk: int = None) -> Response:
         """Renew payment"""
-        expired_payment = get_object_or_404(Payment, id=pk)
-        borrow = expired_payment.borrow
-        new_payment = Payment.objects.create(user=request.user)
+        payment = self.get_object()
 
-        checkout_session = utils.start_checkout_session(borrow, new_payment)
+        if payment.status == "expired":
+            borrow = payment.borrow
+            new_payment = Payment.objects.create(user=request.user)
 
-        new_payment.session_id = checkout_session["id"]
-        new_payment.session_url = checkout_session["url"]
-        new_payment.save()
+            checkout_session = utils.start_checkout_session(
+                borrow, new_payment
+            )
 
-        borrow.payments.add(new_payment)
-        borrow.save()
+            new_payment.session_id = checkout_session["id"]
+            new_payment.session_url = checkout_session["url"]
 
-        serializer = PaymentListSerializer(new_payment)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            borrow.payments.add(new_payment)
+            borrow.save()
+
+            serializer = PaymentDetailSerializer(new_payment, request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        message = {
+            "error": f"Payment status is {payment.status}. "
+            "You can not renew payment if it is not expired"
+        }
+
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
 
     @extend_schema(
         responses=OpenApiResponse(OpenApiTypes.STR),
@@ -327,7 +341,8 @@ class PaymentViewSet(
     )
     def cancel_payment(self, request: Request, pk: int = None) -> Response:
         """
-        Display message to user about payment's possibilities and duration session
+        Display message to user about payment's possibilities and duration
+        session
         """
         message = (
             "You can pay later, but remember, "
@@ -335,41 +350,3 @@ class PaymentViewSet(
         )
 
         return Response(message, status=status.HTTP_200_OK)
-
-
-# @extend_schema(
-#     request=None,
-#     responses=BorrowDetailSerializer,
-# )
-# @api_view(["POST"])
-# def borrow_book_return(request: Request, pk: int) -> Response:
-#     """Close borrow and grow up book inventory when it returns"""
-#     borrow = get_object_or_404(Borrow, id=pk)
-#     book = borrow.book
-#
-#     if borrow.actual_return_date:
-#         raise ValidationError(
-#             {
-#                 "actual_return_date": "The Borrow already closed and book "
-#                 "returned to library"
-#             }
-#         )
-#     borrow.actual_return_date = timezone.now().date()
-#     book.inventory += 1
-#     book.save()
-#
-#     if borrow.actual_return_date > borrow.expected_return_date:
-#         payment = Payment.objects.create(user=request.user)
-#
-#         checkout_session = utils.start_checkout_session(borrow, payment, 2)
-#
-#         payment.session_id = checkout_session["id"]
-#         payment.session_url = checkout_session["url"]
-#         payment.save()
-#
-#         borrow.payments.add(payment)
-#         borrow.save()
-#
-#     serializer = BorrowDetailSerializer(borrow)
-#
-#     return Response(serializer.data, status=status.HTTP_200_OK)
