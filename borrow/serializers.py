@@ -2,7 +2,10 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
-from book.serializers import BookSerializer, BookTelegramSerializer
+from book.serializers import (
+    BookSerializer,
+    BookTelegramSerializer,
+)
 from borrow.models import Borrow, Payment
 from user.serializers import UserSerializer, UserTelegramSerializer
 
@@ -96,14 +99,7 @@ class BorrowDetailSerializer(BorrowListSerializer):
     payments = PaymentSerializer(many=True, read_only=True)
 
 
-class PaymentListSerializer(serializers.ModelSerializer):
-    user = serializers.SlugRelatedField(
-        many=False, read_only=True, slug_field="id"
-    )
-    borrow = serializers.PrimaryKeyRelatedField(
-        queryset=Borrow.objects.select_related("user", "book"), required=False
-    )
-
+class PaymentListSerializer(PaymentSerializer):
     class Meta:
         model = Payment
         fields = (
@@ -133,18 +129,6 @@ class PaymentDetailSerializer(PaymentListSerializer):
     user = UserSerializer(many=False, read_only=True)
     borrow = BorrowPaymentSerializer(many=False, read_only=True)
 
-    class Meta:
-        model = Payment
-        fields = (
-            "id",
-            "borrow",
-            "created_at",
-            "session_url",
-            "session_id",
-            "status",
-            "user",
-        )
-
 
 class BorrowTelegramSerializer(serializers.ModelSerializer):
     user = UserTelegramSerializer(many=False, read_only=True)
@@ -158,3 +142,19 @@ class BorrowTelegramSerializer(serializers.ModelSerializer):
             "book",
             "user",
         )
+
+
+class BorrowReturnBookSerializer(BorrowSerializer):
+    actual_return_date = serializers.DateField(read_only=True)
+
+    class Meta:
+        model = Borrow
+        fields = ("id", "actual_return_date")
+
+
+class PaymentIsSuccessSerializer(PaymentSerializer):
+    status = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Payment
+        fields = ("id", "status")

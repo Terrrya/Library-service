@@ -21,7 +21,7 @@ def payment_is_success_url(payment_id: int) -> str:
 
 
 def cancel_payment_url(payment_id: int) -> str:
-    return reverse("borrow:cancel-payment", args=[payment_id])
+    return reverse("borrow:payment-cancel-payment", args=[payment_id])
 
 
 class UtilsTests(TestCase):

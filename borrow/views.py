@@ -15,9 +15,8 @@ from drf_spectacular.utils import (
     OpenApiResponse,
 )
 from rest_framework import mixins, viewsets, status
-from rest_framework.decorators import api_view, action
+from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -33,6 +32,9 @@ from borrow.serializers import (
     BorrowSerializer,
     PaymentListSerializer,
     PaymentDetailSerializer,
+    BorrowReturnBookSerializer,
+    PaymentIsSuccessSerializer,
+    PaymentSerializer,
 )
 from user.management.commands import t_bot
 from user.models import TelegramChat
@@ -118,6 +120,8 @@ class BorrowViewSet(
             return BorrowDetailSerializer
         if self.action == "create":
             return BorrowCreateSerializer
+        if self.action == "borrow_book_return":
+            return BorrowReturnBookSerializer
 
     def create(self, request: Request, *args: list, **kwargs: dict):
         """
@@ -173,6 +177,49 @@ class BorrowViewSet(
                     t_bot.send_msg(text=text, chat_user_id=chat_user_id)
                 )
 
+    @extend_schema(
+        request=None,
+        responses=BorrowReturnBookSerializer,
+    )
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_name="book-return",
+    )
+    def borrow_book_return(self, request: Request, pk: int) -> Response:
+        """Close borrow and grow up book inventory when it returns"""
+        borrow = self.get_object()
+        book = borrow.book
+
+        if borrow.actual_return_date:
+            raise ValidationError(
+                {
+                    "actual_return_date": "The Borrow already closed and book "
+                    "returned to library"
+                }
+            )
+        borrow.actual_return_date = timezone.now().date()
+        book.inventory += 1
+        book.save()
+
+        if borrow.actual_return_date > borrow.expected_return_date:
+            payment = Payment.objects.create(user=request.user)
+
+            checkout_session = utils.start_checkout_session(borrow, payment, 2)
+
+            payment.session_id = checkout_session["id"]
+            payment.session_url = checkout_session["url"]
+            payment.save()
+
+            borrow.payments.add(payment)
+
+        serializer = self.get_serializer(borrow, request.data)
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -196,13 +243,20 @@ class PaymentViewSet(
 
         return queryset
 
-    def get_serializer_class(self) -> Type[PaymentListSerializer]:
+    def get_serializer_class(self) -> Type[PaymentSerializer]:
         """Take different serializers for different actions"""
         if self.action == "list":
             return PaymentListSerializer
         if self.action == "retrieve":
             return PaymentDetailSerializer
+        if self.action == "is_success":
+            return PaymentIsSuccessSerializer
+        if self.action == "renew_payment":
+            return PaymentDetailSerializer
 
+    @extend_schema(
+        responses=PaymentListSerializer,
+    )
     @action(
         methods=["GET"],
         detail=True,
@@ -210,7 +264,8 @@ class PaymentViewSet(
     )
     def is_success(self, request: Request, pk: int = None) -> Response:
         """
-        Check session's payment status & change Payment status if it changed
+        Check session's payment status, change Payment status if it changed and
+        send message via Telegram
         """
         stripe.api_key = settings.STRIPE_API_KEY
         payment = self.get_object()
@@ -218,7 +273,6 @@ class PaymentViewSet(
 
         if session.status == "complete" and payment.status != "success":
             payment.status = "success"
-            payment.save()
 
             chat_user_id_list = TelegramChat.objects.values_list(
                 "chat_user_id", flat=True
@@ -231,83 +285,68 @@ class PaymentViewSet(
                         t_bot.send_msg(text=text, chat_user_id=chat_user_id)
                     )
 
-        serializer = PaymentListSerializer(payment)
+        serializer = self.get_serializer(payment, request.data)
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-@extend_schema(
-    request=None,
-    responses=BorrowDetailSerializer,
-)
-@api_view(["POST"])
-def borrow_book_return(request: Request, pk: int) -> Response:
-    """Close borrow and grow up book inventory when it returns"""
-    borrow = get_object_or_404(Borrow, id=pk)
-    book = borrow.book
-
-    if borrow.actual_return_date:
-        raise ValidationError(
-            {
-                "actual_return_date": "The Borrow already closed and book "
-                "returned to library"
-            }
-        )
-    borrow.actual_return_date = timezone.now().date()
-    book.inventory += 1
-    book.save()
-
-    if borrow.actual_return_date > borrow.expected_return_date:
-        payment = Payment.objects.create(user=request.user)
-
-        checkout_session = utils.start_checkout_session(borrow, payment, 2)
-
-        payment.session_id = checkout_session["id"]
-        payment.session_url = checkout_session["url"]
-        payment.save()
-
-        borrow.payments.add(payment)
-        borrow.save()
-
-    serializer = BorrowDetailSerializer(borrow)
-
-    return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-@extend_schema(
-    responses=OpenApiResponse(OpenApiTypes.STR),
-)
-@api_view(["GET"])
-def cancel_payment(request: Request, pk: int = None) -> Response:
-    """
-    Display message to user about payment's possibilities and duration session
-    """
-    message = (
-        "You can pay later, but remember, "
-        "the payment must be made within 24 hours"
+    @extend_schema(
+        responses=PaymentListSerializer,
     )
+    @action(
+        methods=["GET"],
+        detail=True,
+        url_name="renew-payment",
+    )
+    def renew_payment(self, request: Request, pk: int = None) -> Response:
+        """Renew payment"""
+        payment = self.get_object()
 
-    return Response(message, status=status.HTTP_200_OK)
+        if payment.status == "expired":
+            borrow = payment.borrow
+            new_payment = Payment.objects.create(user=request.user)
 
+            checkout_session = utils.start_checkout_session(
+                borrow, new_payment
+            )
 
-@extend_schema(
-    responses=PaymentListSerializer,
-)
-@api_view(["GET"])
-def renew_payment(request: Request, pk: int = None) -> Response:
-    """Renew payment"""
-    expired_payment = get_object_or_404(Payment, id=pk)
-    borrow = expired_payment.borrow
-    new_payment = Payment.objects.create(user=request.user)
+            new_payment.session_id = checkout_session["id"]
+            new_payment.session_url = checkout_session["url"]
 
-    checkout_session = utils.start_checkout_session(borrow, new_payment)
+            borrow.payments.add(new_payment)
+            borrow.save()
 
-    new_payment.session_id = checkout_session["id"]
-    new_payment.session_url = checkout_session["url"]
-    new_payment.save()
+            serializer = PaymentDetailSerializer(new_payment, request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
 
-    borrow.payments.add(new_payment)
-    borrow.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
 
-    serializer = PaymentListSerializer(new_payment)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+        message = {
+            "error": f"Payment status is {payment.status}. "
+            "You can not renew payment if it is not expired"
+        }
+
+        return Response(message, status=status.HTTP_400_BAD_REQUEST)
+
+    @extend_schema(
+        responses=OpenApiResponse(OpenApiTypes.STR),
+    )
+    @action(
+        methods=["GET"],
+        detail=True,
+        url_name="cancel-payment",
+    )
+    def cancel_payment(self, request: Request, pk: int = None) -> Response:
+        """
+        Display message to user about payment's possibilities and duration
+        session
+        """
+        message = (
+            "You can pay later, but remember, "
+            "the payment must be made within 24 hours"
+        )
+
+        return Response(message, status=status.HTTP_200_OK)

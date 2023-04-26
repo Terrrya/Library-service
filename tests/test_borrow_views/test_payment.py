@@ -153,7 +153,7 @@ class AuthenticatedPaymentTests(TestCase):
         )
 
         response = self.client.get(
-            reverse("borrow:cancel-payment", args=[payment.id])
+            reverse("borrow:payment-cancel-payment", args=[payment.id])
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -171,7 +171,7 @@ class AuthenticatedPaymentTests(TestCase):
         }
 
         response = self.client.get(
-            reverse("borrow:renew-payment", args=[payment.id])
+            reverse("borrow:payment-renew-payment", args=[payment.id])
         )
         new_payment = Payment.objects.get(id=response.data["id"])
         serializer = PaymentListSerializer(new_payment)

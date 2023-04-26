@@ -1,6 +1,5 @@
 from datetime import timedelta
 from decimal import Decimal
-from typing import Optional
 
 import stripe
 from django.conf import settings
@@ -21,7 +20,7 @@ def start_checkout_session(
     """
     stripe.api_key = settings.STRIPE_API_KEY
     action_url = reverse("borrow:payment-is-success", args=[payment.id])
-    cancel_url = reverse("borrow:cancel-payment", args=[payment.id])
+    cancel_url = reverse("borrow:payment-cancel-payment", args=[payment.id])
     host = settings.HOST
     if fine_multiplier == 1:
         days_count = borrow.expected_return_date - borrow.borrow_date
