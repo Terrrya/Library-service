@@ -117,6 +117,8 @@ class BorrowViewSet(
             return BorrowDetailSerializer
         if self.action == "create":
             return BorrowCreateSerializer
+        if self.action == "borrow_book_return":
+            return BorrowDetailSerializer
 
     def create(self, request: Request, *args: list, **kwargs: dict):
         """
@@ -171,6 +173,47 @@ class BorrowViewSet(
                 asyncio.run(
                     t_bot.send_msg(text=text, chat_user_id=chat_user_id)
                 )
+
+    @extend_schema(
+        request=None,
+        responses=BorrowDetailSerializer,
+    )
+    @action(
+        methods=["POST"],
+        detail=True,
+        url_name="book-return",
+    )
+    def borrow_book_return(self, request: Request, pk: int) -> Response:
+        """Close borrow and grow up book inventory when it returns"""
+        borrow = get_object_or_404(Borrow, id=pk)
+        book = borrow.book
+
+        if borrow.actual_return_date:
+            raise ValidationError(
+                {
+                    "actual_return_date": "The Borrow already closed and book "
+                    "returned to library"
+                }
+            )
+        borrow.actual_return_date = timezone.now().date()
+        book.inventory += 1
+        book.save()
+
+        if borrow.actual_return_date > borrow.expected_return_date:
+            payment = Payment.objects.create(user=request.user)
+
+            checkout_session = utils.start_checkout_session(borrow, payment, 2)
+
+            payment.session_id = checkout_session["id"]
+            payment.session_url = checkout_session["url"]
+            payment.save()
+
+            borrow.payments.add(payment)
+            borrow.save()
+
+        serializer = BorrowDetailSerializer(borrow)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 @extend_schema_view(
@@ -283,39 +326,39 @@ class PaymentViewSet(
         return Response(message, status=status.HTTP_200_OK)
 
 
-@extend_schema(
-    request=None,
-    responses=BorrowDetailSerializer,
-)
-@api_view(["POST"])
-def borrow_book_return(request: Request, pk: int) -> Response:
-    """Close borrow and grow up book inventory when it returns"""
-    borrow = get_object_or_404(Borrow, id=pk)
-    book = borrow.book
-
-    if borrow.actual_return_date:
-        raise ValidationError(
-            {
-                "actual_return_date": "The Borrow already closed and book "
-                "returned to library"
-            }
-        )
-    borrow.actual_return_date = timezone.now().date()
-    book.inventory += 1
-    book.save()
-
-    if borrow.actual_return_date > borrow.expected_return_date:
-        payment = Payment.objects.create(user=request.user)
-
-        checkout_session = utils.start_checkout_session(borrow, payment, 2)
-
-        payment.session_id = checkout_session["id"]
-        payment.session_url = checkout_session["url"]
-        payment.save()
-
-        borrow.payments.add(payment)
-        borrow.save()
-
-    serializer = BorrowDetailSerializer(borrow)
-
-    return Response(serializer.data, status=status.HTTP_200_OK)
+# @extend_schema(
+#     request=None,
+#     responses=BorrowDetailSerializer,
+# )
+# @api_view(["POST"])
+# def borrow_book_return(request: Request, pk: int) -> Response:
+#     """Close borrow and grow up book inventory when it returns"""
+#     borrow = get_object_or_404(Borrow, id=pk)
+#     book = borrow.book
+#
+#     if borrow.actual_return_date:
+#         raise ValidationError(
+#             {
+#                 "actual_return_date": "The Borrow already closed and book "
+#                 "returned to library"
+#             }
+#         )
+#     borrow.actual_return_date = timezone.now().date()
+#     book.inventory += 1
+#     book.save()
+#
+#     if borrow.actual_return_date > borrow.expected_return_date:
+#         payment = Payment.objects.create(user=request.user)
+#
+#         checkout_session = utils.start_checkout_session(borrow, payment, 2)
+#
+#         payment.session_id = checkout_session["id"]
+#         payment.session_url = checkout_session["url"]
+#         payment.save()
+#
+#         borrow.payments.add(payment)
+#         borrow.save()
+#
+#     serializer = BorrowDetailSerializer(borrow)
+#
+#     return Response(serializer.data, status=status.HTTP_200_OK)
