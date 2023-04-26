@@ -1,4 +1,3 @@
-import asyncio
 from datetime import timedelta
 
 from asgiref.sync import async_to_sync
