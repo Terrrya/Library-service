@@ -6,6 +6,7 @@ from book.serializers import (
     BookSerializer,
     BookTelegramSerializer,
 )
+from borrow import utils
 from borrow.models import Borrow, Payment
 from user.serializers import UserSerializer, UserTelegramSerializer
 
@@ -150,6 +151,37 @@ class BorrowReturnBookSerializer(BorrowSerializer):
     class Meta:
         model = Borrow
         fields = ("id", "actual_return_date")
+
+    def validate(self, attrs: dict) -> dict:
+        """Validate data when borrow book returned"""
+        data = super().validate(attrs)
+
+        borrow = self.instance
+        book = borrow.book
+
+        if borrow.actual_return_date:
+            raise serializers.ValidationError(
+                {
+                    "actual_return_date": "The Borrow already closed and book "
+                    "returned to library"
+                }
+            )
+        borrow.actual_return_date = timezone.now().date()
+        book.inventory += 1
+        book.save()
+
+        if borrow.actual_return_date > borrow.expected_return_date:
+            payment = Payment.objects.create(user=borrow.user)
+
+            checkout_session = utils.start_checkout_session(borrow, payment, 2)
+
+            payment.session_id = checkout_session["id"]
+            payment.session_url = checkout_session["url"]
+            payment.save()
+
+            borrow.payments.add(payment)
+
+        return data
 
 
 class PaymentIsSuccessSerializer(PaymentSerializer):

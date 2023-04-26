@@ -6,7 +6,6 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import QuerySet, Q
-from django.utils import timezone
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import (
     extend_schema,
@@ -20,7 +19,6 @@ from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.serializers import ValidationError
 
 from book.models import Book
 from borrow import utils
@@ -191,29 +189,6 @@ class BorrowViewSet(
     def borrow_book_return(self, request: Request, pk: int) -> Response:
         """Close borrow and grow up book inventory when it returns"""
         borrow = self.get_object()
-        book = borrow.book
-
-        if borrow.actual_return_date:
-            raise ValidationError(
-                {
-                    "actual_return_date": "The Borrow already closed and book "
-                    "returned to library"
-                }
-            )
-        borrow.actual_return_date = timezone.now().date()
-        book.inventory += 1
-        book.save()
-
-        if borrow.actual_return_date > borrow.expected_return_date:
-            payment = Payment.objects.create(user=request.user)
-
-            checkout_session = utils.start_checkout_session(borrow, payment, 2)
-
-            payment.session_id = checkout_session["id"]
-            payment.session_url = checkout_session["url"]
-            payment.save()
-
-            borrow.payments.add(payment)
 
         serializer = self.get_serializer(borrow, request.data)
 
