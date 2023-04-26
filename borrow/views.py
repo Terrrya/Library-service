@@ -33,6 +33,7 @@ from borrow.serializers import (
     PaymentListSerializer,
     PaymentDetailSerializer,
     BorrowReturnBookSerializer,
+    PaymentIsSuccessSerializer, PaymentSerializer,
 )
 from user.management.commands import t_bot
 from user.models import TelegramChat
@@ -241,11 +242,15 @@ class PaymentViewSet(
 
         return queryset
 
-    def get_serializer_class(self) -> Type[PaymentListSerializer]:
+    def get_serializer_class(self) -> Type[PaymentSerializer]:
         """Take different serializers for different actions"""
         if self.action == "list":
             return PaymentListSerializer
         if self.action == "retrieve":
+            return PaymentDetailSerializer
+        if self.action == "is_success":
+            return PaymentIsSuccessSerializer
+        if self.action == "renew_payment":
             return PaymentDetailSerializer
 
     @extend_schema(
@@ -258,7 +263,8 @@ class PaymentViewSet(
     )
     def is_success(self, request: Request, pk: int = None) -> Response:
         """
-        Check session's payment status & change Payment status if it changed
+        Check session's payment status, change Payment status if it changed and
+        send message via Telegram
         """
         stripe.api_key = settings.STRIPE_API_KEY
         payment = self.get_object()
@@ -266,7 +272,6 @@ class PaymentViewSet(
 
         if session.status == "complete" and payment.status != "success":
             payment.status = "success"
-            payment.save()
 
             chat_user_id_list = TelegramChat.objects.values_list(
                 "chat_user_id", flat=True
@@ -279,7 +284,10 @@ class PaymentViewSet(
                         t_bot.send_msg(text=text, chat_user_id=chat_user_id)
                     )
 
-        serializer = PaymentListSerializer(payment)
+        serializer = self.get_serializer(payment, request.data)
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
