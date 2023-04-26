@@ -74,19 +74,19 @@ Open in browser 127.0.0.1:8000/api/
 ## Filling .env file
 <hr>
 
-To fill .env file you have to get API token of telegram bot and Secret API Token. 
-https://core.telegram.org/bots/faq#how-do-i-create-a-bot can help you to get Telegram API token
-https://stripe.com/docs/keys - can help you to get Stripe secret access key
+To fill .env file you have to get API token of telegram bot and Stripe Secret API Token. 
+<br> https://core.telegram.org/bots/faq#how-do-i-create-a-bot can help you to get Telegram API token
+<br> https://stripe.com/docs/keys - can help you to get Stripe secret access key
 
 
 ## Getting access
 <hr>
 
 You can use following:
- superuser:
+- superuser:
   - Email: admin@admin.com
   - Password: 12345
- user:
+- user:
   - Email: test@library.com
   - Password: test12345
 
@@ -108,7 +108,7 @@ value: Bearer <token>
 
 ### Telegram notification
 If you want to get messages from your telegram bot you should write to your bot "/start". 
-If you want to stop it you should write "/stop". Notifications can get a few staffs, not only one.
+If you want to stop it you should write "/stop". A few staffs can get notifications, not only one.
 
 ## Library API allows:
 
@@ -127,7 +127,7 @@ If you want to stop it you should write "/stop". Notifications can get a few sta
 - via [GET] /api/borrows/ --- Borrows list
 - via [POST] /api/borrows/ --- Add new borrow
 - via [GET] /api/borrows/<pk>/ --- Borrow detail information
-- via [POST] /api/borrows/<pk>/borrow_book_return/ --- Close borrow and return book to library
+- via [POST] /api/borrows/<pk>/return/ --- Close borrow and return book to library
 - via [GET] /api/payments/ --- Payments list
 - via [GET] /api/payments/<pk>/ --- Payments detail information
 - via [GET] /api/payments/<pk>/cancel_payment/ --- Display message to user about payment's possibilities and duration session
