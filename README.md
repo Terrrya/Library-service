@@ -127,9 +127,9 @@ If you want to stop it you should write "/stop". Notifications can get a few sta
 - via [GET] /api/borrows/ --- Borrows list
 - via [POST] /api/borrows/ --- Add new borrow
 - via [GET] /api/borrows/<pk>/ --- Borrow detail information
-- via [POST] /api/borrows/<pk>/return/ --- Close borrow and return book to library
+- via [POST] /api/borrows/<pk>/borrow_book_return/ --- Close borrow and return book to library
 - via [GET] /api/payments/ --- Payments list
 - via [GET] /api/payments/<pk>/ --- Payments detail information
-- via [GET] /api/payments/<pk>/cancel-payment/ --- Display message to user about payment's possibilities and duration session
-- via [GET] /api/payments/<pk>/is-success/ --- Check session's payment status
-- via [GET] /api/payments/<pk>/renew-payment/ --- Renew payment
+- via [GET] /api/payments/<pk>/cancel_payment/ --- Display message to user about payment's possibilities and duration session
+- via [GET] /api/payments/<pk>/is_success/ --- Check session's payment status
+- via [GET] /api/payments/<pk>/renew_payment/ --- Renew payment
