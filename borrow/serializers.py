@@ -2,7 +2,10 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 
-from book.serializers import BookSerializer, BookTelegramSerializer
+from book.serializers import (
+    BookSerializer,
+    BookTelegramSerializer,
+)
 from borrow.models import Borrow, Payment
 from user.serializers import UserSerializer, UserTelegramSerializer
 
@@ -158,3 +161,11 @@ class BorrowTelegramSerializer(serializers.ModelSerializer):
             "book",
             "user",
         )
+
+
+class BorrowReturnBookSerializer(BorrowSerializer):
+    actual_return_date = serializers.DateField(read_only=True)
+
+    class Meta:
+        model = Borrow
+        fields = ("id", "actual_return_date")

@@ -32,6 +32,7 @@ from borrow.serializers import (
     BorrowSerializer,
     PaymentListSerializer,
     PaymentDetailSerializer,
+    BorrowReturnBookSerializer,
 )
 from user.management.commands import t_bot
 from user.models import TelegramChat
@@ -118,7 +119,7 @@ class BorrowViewSet(
         if self.action == "create":
             return BorrowCreateSerializer
         if self.action == "borrow_book_return":
-            return BorrowDetailSerializer
+            return BorrowReturnBookSerializer
 
     def create(self, request: Request, *args: list, **kwargs: dict):
         """
@@ -176,7 +177,7 @@ class BorrowViewSet(
 
     @extend_schema(
         request=None,
-        responses=BorrowDetailSerializer,
+        responses=BorrowReturnBookSerializer,
     )
     @action(
         methods=["POST"],
@@ -185,7 +186,7 @@ class BorrowViewSet(
     )
     def borrow_book_return(self, request: Request, pk: int) -> Response:
         """Close borrow and grow up book inventory when it returns"""
-        borrow = get_object_or_404(Borrow, id=pk)
+        borrow = self.get_object()
         book = borrow.book
 
         if borrow.actual_return_date:
@@ -209,9 +210,11 @@ class BorrowViewSet(
             payment.save()
 
             borrow.payments.add(payment)
-            borrow.save()
 
-        serializer = BorrowDetailSerializer(borrow)
+        serializer = self.get_serializer(borrow, request.data)
+
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
 
         return Response(serializer.data, status=status.HTTP_200_OK)
 
