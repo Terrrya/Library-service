@@ -1,6 +1,7 @@
 import asyncio
 from datetime import timedelta
 
+from asgiref.sync import async_to_sync
 from django.db.models import Q
 from django.utils import timezone
 from rest_framework.utils import json
@@ -35,16 +36,15 @@ def inform_borrowing_overdue() -> None:
             for chat_user_id in TelegramChat.objects.values_list(
                 "chat_user_id", flat=True
             ):
-                asyncio.run(
-                    t_bot.send_msg(
-                        text=text[i : i + 4096], chat_user_id=chat_user_id
-                    )
+                async_to_sync(t_bot.send_msg)(
+                    text=text[i : i + 4096], chat_user_id=chat_user_id
                 )
+
     else:
         for chat_user_id in TelegramChat.objects.values_list(
             "chat_user_id", flat=True
         ):
-            asyncio.run(t_bot.send_msg(text=text, chat_user_id=chat_user_id))
+            async_to_sync(t_bot.send_msg)(text=text, chat_user_id=chat_user_id)
 
 
 def check_payment_session_duration() -> None:

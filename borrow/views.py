@@ -2,6 +2,7 @@ import asyncio
 from typing import Type
 
 import stripe
+from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -122,6 +123,7 @@ class BorrowViewSet(
             return BorrowCreateSerializer
         if self.action == "borrow_book_return":
             return BorrowReturnBookSerializer
+        return BorrowSerializer
 
     def create(self, request: Request, *args: list, **kwargs: dict):
         """
@@ -173,8 +175,8 @@ class BorrowViewSet(
         )
         if chat_user_id_list:
             for chat_user_id in chat_user_id_list:
-                asyncio.run(
-                    t_bot.send_msg(text=text, chat_user_id=chat_user_id)
+                async_to_sync(t_bot.send_msg)(
+                    text=text, chat_user_id=chat_user_id
                 )
 
     @extend_schema(
@@ -185,6 +187,7 @@ class BorrowViewSet(
         methods=["POST"],
         detail=True,
         url_name="book-return",
+        url_path="return",
     )
     def borrow_book_return(self, request: Request, pk: int) -> Response:
         """Close borrow and grow up book inventory when it returns"""
@@ -253,6 +256,7 @@ class PaymentViewSet(
             return PaymentIsSuccessSerializer
         if self.action == "renew_payment":
             return PaymentDetailSerializer
+        return PaymentSerializer
 
     @extend_schema(
         responses=PaymentListSerializer,
@@ -281,8 +285,8 @@ class PaymentViewSet(
             text = f"For borrowing {borrow} payment was paid"
             if chat_user_id_list:
                 for chat_user_id in chat_user_id_list:
-                    asyncio.run(
-                        t_bot.send_msg(text=text, chat_user_id=chat_user_id)
+                    async_to_sync(t_bot.send_msg)(
+                        text=text, chat_user_id=chat_user_id
                     )
 
         serializer = self.get_serializer(payment, request.data)
