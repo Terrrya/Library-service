@@ -1,6 +1,5 @@
 from drf_spectacular.utils import extend_schema_view, extend_schema
 from rest_framework import viewsets
-from rest_framework.pagination import PageNumberPagination
 
 from book.models import Book
 from book.permissions import IsAdminOrAnyReadOnly
